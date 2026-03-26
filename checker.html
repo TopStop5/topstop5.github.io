@@ -444,8 +444,8 @@
   <div class="results-header">
     <div class="results-title">Results</div>
     <div class="copy-btns">
-      <button class="copy-btn" onclick="copyList('found')">Copy found</button>
-      <button class="copy-btn" onclick="copyList('notfound')">Copy not found</button>
+      <button class="copy-btn" onclick="copyList('found')">copy found</button>
+      <button class="copy-btn" onclick="copyList('notfound')">copy not found</button>
     </div>
   </div>
 
@@ -465,7 +465,9 @@
   let foundUsernames = [];
   let notFoundUsernames = [];
 
-  const PROFILE_URL = u => `https://api.mojang.com/users/profiles/minecraft/${u}`;
+  const PROXY = 'https://corsproxy.io/?url=';
+  const PROFILE_URL = u => `${PROXY}${encodeURIComponent(`https://api.mojang.com/users/profiles/minecraft/${u}`)}`;
+  const HISTORY_URL = id => `${PROXY}${encodeURIComponent(`https://api.mojang.com/user/profiles/${id}/names`)}`;
 
   // ── Utils ──
   function setStatus(msg) {
@@ -582,7 +584,7 @@
 
       if (tryHistory && data.id) {
         try {
-          const hRes = await fetch(`https://api.mojang.com/user/profiles/${data.id}/names`);
+          const hRes = await fetch(HISTORY_URL(data.id));
           if (hRes.ok) {
             const hData = await hRes.json();
             result.history = hData.length;
