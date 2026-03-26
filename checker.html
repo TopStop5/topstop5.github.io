@@ -44,7 +44,6 @@
       z-index: 0;
     }
 
-    /* ── Layout ── */
     .app {
       position: relative;
       z-index: 1;
@@ -79,10 +78,7 @@
     }
     .back-btn:hover { color: var(--text); border-color: rgba(124,58,237,0.4); }
 
-    .header-title {
-      display: flex;
-      flex-direction: column;
-    }
+    .header-title { display: flex; flex-direction: column; }
 
     .header-tag {
       font-family: 'Share Tech Mono', monospace;
@@ -92,11 +88,7 @@
       text-transform: uppercase;
     }
 
-    h1 {
-      font-size: 26px;
-      font-weight: 700;
-      letter-spacing: 1px;
-    }
+    h1 { font-size: 26px; font-weight: 700; letter-spacing: 1px; }
 
     /* ── Input panel ── */
     .input-panel {
@@ -131,12 +123,7 @@
     textarea:focus { border-color: var(--accent); }
     textarea::placeholder { color: var(--neutral); }
 
-    .controls {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      min-width: 160px;
-    }
+    .controls { display: flex; flex-direction: column; gap: 10px; min-width: 160px; }
 
     .btn {
       padding: 12px 20px;
@@ -150,20 +137,11 @@
       cursor: pointer;
       transition: all 0.2s;
     }
-
-    .btn-primary {
-      background: var(--accent);
-      color: #fff;
-    }
+    .btn-primary { background: var(--accent); color: #fff; }
     .btn-primary:hover { background: var(--accent-h); }
     .btn-primary:disabled { background: #333; color: var(--muted); cursor: not-allowed; }
-
-    .btn-stop {
-      background: #8B0000;
-      color: #fff;
-    }
+    .btn-stop { background: #8B0000; color: #fff; }
     .btn-stop:hover { background: #6a0000; }
-
     .btn-secondary {
       background: transparent;
       border: 1px solid rgba(255,255,255,0.1);
@@ -173,72 +151,13 @@
     }
     .btn-secondary:hover { border-color: rgba(124,58,237,0.4); color: var(--text); }
 
-    .options-row {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      flex-wrap: wrap;
-    }
+    .options-row { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
 
-    .option-label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      color: var(--muted);
-      letter-spacing: 0.5px;
-    }
+    .concurrency-label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+    input[type=range] { accent-color: var(--accent); width: 90px; }
+    #concurrency-val { font-family: 'Share Tech Mono', monospace; font-size: 13px; color: var(--accent); min-width: 20px; }
 
-    .toggle {
-      position: relative;
-      width: 36px;
-      height: 20px;
-    }
-    .toggle input { opacity: 0; width: 0; height: 0; }
-    .toggle-slider {
-      position: absolute;
-      inset: 0;
-      background: #222;
-      border-radius: 20px;
-      cursor: pointer;
-      transition: 0.2s;
-      border: 1px solid #333;
-    }
-    .toggle-slider::before {
-      content: '';
-      position: absolute;
-      width: 14px;
-      height: 14px;
-      left: 2px;
-      top: 2px;
-      background: var(--muted);
-      border-radius: 50%;
-      transition: 0.2s;
-    }
-    .toggle input:checked + .toggle-slider { background: var(--accent); border-color: var(--accent-b); }
-    .toggle input:checked + .toggle-slider::before { transform: translateX(16px); background: #fff; }
-
-    .concurrency-label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    input[type=range] {
-      accent-color: var(--accent);
-      width: 90px;
-    }
-
-    #concurrency-val {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 13px;
-      color: var(--accent);
-      min-width: 20px;
-    }
-
-    /* ── Status bar ── */
+    /* ── Status ── */
     .status-bar {
       font-family: 'Share Tech Mono', monospace;
       font-size: 12px;
@@ -247,30 +166,17 @@
       letter-spacing: 0.5px;
       min-height: 34px;
     }
-
     .status-bar span { color: var(--accent); }
 
-    /* ── Results ── */
+    /* ── Results header ── */
     .results-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       margin-bottom: 12px;
     }
-
-    .results-title {
-      font-size: 13px;
-      font-weight: 500;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-
-    .copy-btns {
-      display: flex;
-      gap: 8px;
-    }
-
+    .results-title { font-size: 13px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+    .copy-btns { display: flex; gap: 8px; }
     .copy-btn {
       font-family: 'Share Tech Mono', monospace;
       font-size: 11px;
@@ -285,11 +191,7 @@
     }
     .copy-btn:hover { border-color: var(--accent); color: var(--text); }
 
-    #results-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
+    #results-list { display: flex; flex-direction: column; gap: 8px; }
 
     /* ── Cards ── */
     .card {
@@ -299,83 +201,34 @@
       padding: 14px 16px;
       display: grid;
       grid-template-columns: 52px 1fr auto;
-      grid-template-rows: auto auto;
       gap: 12px;
       align-items: center;
       animation: slideIn 0.25s ease;
     }
-
-    .card.ok    { border-left: 3px solid var(--success); }
+    .card.ok       { border-left: 3px solid var(--success); }
     .card.notfound { border-left: 3px solid var(--error); }
-    .card.warn  { border-left: 3px solid var(--warn); }
-    .card.loading { border-left: 3px solid #333; }
+    .card.warn     { border-left: 3px solid var(--warn); }
+    .card.loading  { border-left: 3px solid #333; }
 
     @keyframes slideIn {
       from { opacity: 0; transform: translateY(8px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    .card-avatar {
-      width: 48px;
-      height: 48px;
-      border-radius: 8px;
-      background: #1a1a1a;
-      overflow: hidden;
-      flex-shrink: 0;
-    }
+    .card-avatar { width: 48px; height: 48px; border-radius: 8px; background: #1a1a1a; overflow: hidden; flex-shrink: 0; }
     .card-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .card-avatar.skeleton { animation: pulse 1.4s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { background: #1a1a1a; } 50% { background: #282828; } }
 
-    .card-avatar.skeleton {
-      animation: pulse 1.4s ease-in-out infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { background: #1a1a1a; }
-      50% { background: #282828; }
-    }
+    .card-info { min-width: 0; }
+    .card-name { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-sub { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    .card-info {
-      min-width: 0;
-    }
-
-    .card-name {
-      font-size: 16px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .card-sub {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 3px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .card-uuid {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      color: #444;
-      margin-top: 2px;
-    }
-
-    .card-badge {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 11px;
-      padding: 4px 10px;
-      border-radius: 4px;
-      white-space: nowrap;
-      letter-spacing: 0.5px;
-    }
-
-    .badge-ok      { background: rgba(34,197,94,0.1);  color: var(--success); border: 1px solid rgba(34,197,94,0.25); }
-    .badge-notfound{ background: rgba(239,68,68,0.1);   color: var(--error);   border: 1px solid rgba(239,68,68,0.25); }
-    .badge-warn    { background: rgba(245,158,11,0.1);  color: var(--warn);    border: 1px solid rgba(245,158,11,0.25); }
-    .badge-loading { background: rgba(107,114,128,0.1); color: var(--neutral); border: 1px solid #333; }
+    .card-badge { font-family: 'Share Tech Mono', monospace; font-size: 11px; padding: 4px 10px; border-radius: 4px; white-space: nowrap; letter-spacing: 0.5px; }
+    .badge-ok       { background: rgba(34,197,94,0.1);  color: var(--success); border: 1px solid rgba(34,197,94,0.25); }
+    .badge-notfound { background: rgba(239,68,68,0.1);  color: var(--error);   border: 1px solid rgba(239,68,68,0.25); }
+    .badge-warn     { background: rgba(245,158,11,0.1); color: var(--warn);    border: 1px solid rgba(245,158,11,0.25); }
+    .badge-loading  { background: rgba(107,114,128,0.1);color: var(--neutral); border: 1px solid #333; }
 
     .empty-state {
       text-align: center;
@@ -387,93 +240,143 @@
       border: 1px dashed #1a1a1a;
       border-radius: 12px;
     }
-
     .empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
 
-    /* ── History btn & dropdown ── */
-    .card-right {
+    /* ── Search History ── */
+    .search-history-section { margin-top: 32px; }
+
+    .sh-header {
       display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 6px;
-    }
-
-    .history-btn {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 11px;
-      padding: 4px 10px;
-      border: 1px solid rgba(124,58,237,0.35);
-      border-radius: 4px;
-      background: transparent;
-      color: var(--accent);
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0 10px;
       cursor: pointer;
-      letter-spacing: 0.5px;
-      transition: all 0.2s;
-      white-space: nowrap;
+      user-select: none;
+      border-top: 1px solid #141414;
     }
-    .history-btn:hover { background: rgba(124,58,237,0.12); border-color: var(--accent); }
-    .history-btn.open { background: rgba(124,58,237,0.15); }
+    .sh-header:hover .sh-title { color: var(--text); }
 
-    .history-dropdown {
-      display: none;
-      background: #0a0a0a;
-      border: 1px solid rgba(124,58,237,0.25);
-      border-radius: 8px;
-      padding: 10px 14px;
-      min-width: 220px;
-      max-width: 280px;
-      margin-top: 4px;
-      grid-column: 1 / -1;
+    .sh-left { display: flex; align-items: center; gap: 10px; }
+
+    .sh-title {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      transition: color 0.2s;
     }
-    .history-dropdown.visible { display: block; animation: fadeDown 0.18s ease; }
+
+    .sh-pill {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--accent);
+      background: rgba(124,58,237,0.1);
+      border: 1px solid rgba(124,58,237,0.18);
+      border-radius: 20px;
+      padding: 1px 8px;
+    }
+
+    .sh-chevron {
+      font-size: 9px;
+      color: #3a3a3a;
+      transition: transform 0.2s, color 0.2s;
+    }
+    .sh-header.open .sh-chevron { transform: rotate(180deg); color: var(--muted); }
+
+    .sh-body {
+      display: none;
+      border: 1px solid #1a1a1a;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .sh-body.visible { display: block; animation: fadeDown 0.15s ease; }
 
     @keyframes fadeDown {
-      from { opacity: 0; transform: translateY(-6px); }
+      from { opacity: 0; transform: translateY(-4px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    .history-dropdown-title {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      letter-spacing: 2px;
-      color: var(--accent);
-      text-transform: uppercase;
-      margin-bottom: 8px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid #1a1a1a;
-    }
-
-    .history-entry {
+    .sh-toolbar {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      padding: 5px 0;
-      border-bottom: 1px solid #111;
-      gap: 12px;
+      gap: 8px;
+      padding: 9px 12px;
+      background: #0a0a0a;
+      border-bottom: 1px solid #141414;
     }
-    .history-entry:last-child { border-bottom: none; }
 
-    .history-name {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 12px;
+    .sh-filter {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
       color: var(--text);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
     }
-    .history-name.current { color: var(--success); }
+    .sh-filter::placeholder { color: #333; }
 
-    .history-date {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      color: var(--neutral);
-      white-space: nowrap;
+    .sh-clear {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border: 1px solid #222;
+      border-radius: 4px;
+      background: transparent;
+      color: #444;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.3px;
     }
+    .sh-clear:hover { border-color: rgba(239,68,68,0.4); color: var(--error); }
 
-    .history-loading {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 11px;
-      color: var(--muted);
-      text-align: center;
-      padding: 8px 0;
+    .sh-list { max-height: 220px; overflow-y: auto; }
+    .sh-list::-webkit-scrollbar { width: 3px; }
+    .sh-list::-webkit-scrollbar-track { background: transparent; }
+    .sh-list::-webkit-scrollbar-thumb { background: #1e1e1e; border-radius: 2px; }
+
+    .sh-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-bottom: 1px solid #0d0d0d;
+      cursor: pointer;
+      transition: background 0.12s;
+      gap: 10px;
     }
+    .sh-item:last-child { border-bottom: none; }
+    .sh-item:hover { background: rgba(255,255,255,0.02); }
+
+    .sh-item-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+
+    .sh-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+    .sh-dot.found    { background: var(--success); }
+    .sh-dot.notfound { background: var(--error); }
+    .sh-dot.error    { background: var(--warn); }
+
+    .sh-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .sh-item-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+    .sh-badge {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      letter-spacing: 0.5px;
+    }
+    .sh-badge.found    { color: var(--success); background: rgba(34,197,94,0.07);  border: 1px solid rgba(34,197,94,0.15); }
+    .sh-badge.notfound { color: var(--error);   background: rgba(239,68,68,0.07);  border: 1px solid rgba(239,68,68,0.15); }
+    .sh-badge.error    { color: var(--warn);    background: rgba(245,158,11,0.07); border: 1px solid rgba(245,158,11,0.15); }
+
+    .sh-time { font-family: 'Share Tech Mono', monospace; font-size: 9px; color: #333; white-space: nowrap; }
+
+    .sh-empty { padding: 24px; text-align: center; font-size: 13px; color: #282828; }
 
     /* ── Responsive ── */
     @media (max-width: 600px) {
@@ -487,16 +390,14 @@
 <body>
 <div class="app">
 
-  <!-- Header -->
   <div class="header">
-    <a href="index.html" class="back-btn">← back</a>
+    <a href="index.html" class="back-btn">← Back</a>
     <div class="header-title">
       <div class="header-tag">// minecraft</div>
       <h1>Username Checker</h1>
     </div>
   </div>
 
-  <!-- Input panel -->
   <div class="input-panel">
     <div class="input-row">
       <textarea id="input-box" placeholder="Enter usernames, one per line...&#10;&#10;Notch&#10;Dream&#10;Technoblade"></textarea>
@@ -507,13 +408,6 @@
       </div>
     </div>
     <div class="options-row">
-      <label class="option-label">
-        <span>Name History</span>
-        <label class="toggle">
-          <input type="checkbox" id="history-toggle">
-          <span class="toggle-slider"></span>
-        </label>
-      </label>
       <div class="concurrency-label">
         Concurrency:
         <input type="range" id="concurrency" min="1" max="10" value="5" oninput="document.getElementById('concurrency-val').textContent=this.value">
@@ -522,41 +416,57 @@
     </div>
   </div>
 
-  <!-- Status -->
   <div class="status-bar" id="status-bar">
-    <span>//</span> ready — enter usernames above and hit check
+    <span>//</span> Ready — Enter Usernames Above And Hit Check
   </div>
 
-  <!-- Results -->
   <div class="results-header">
     <div class="results-title">Results</div>
     <div class="copy-btns">
-      <button class="copy-btn" onclick="copyList('found')">copy found</button>
-      <button class="copy-btn" onclick="copyList('notfound')">copy not found</button>
+      <button class="copy-btn" onclick="copyList('found')">Copy Found</button>
+      <button class="copy-btn" onclick="copyList('notfound')">Copy not Found</button>
     </div>
   </div>
 
   <div id="results-list">
     <div class="empty-state">
       <div class="empty-icon">⛏</div>
-      results will appear here
+      Results Will Appear Here
+    </div>
+  </div>
+
+  <!-- Search History -->
+  <div class="search-history-section">
+    <div class="sh-header" id="sh-header" onclick="toggleHistory()">
+      <div class="sh-left">
+        <span class="sh-title">Search History</span>
+        <span class="sh-pill" id="sh-count">0</span>
+      </div>
+      <span class="sh-chevron">▼</span>
+    </div>
+    <div class="sh-body" id="sh-body">
+      <div class="sh-toolbar">
+        <input class="sh-filter" type="text" id="sh-filter" placeholder="Filter history..." oninput="renderHistory()">
+        <button class="sh-clear" onclick="clearHistory()">Clear All</button>
+      </div>
+      <div class="sh-list" id="sh-list">
+        <div class="sh-empty">No History Yet</div>
+      </div>
     </div>
   </div>
 
 </div>
 
 <script>
-  // ── State ──
   let running = false;
   let stopRequested = false;
   let foundUsernames = [];
   let notFoundUsernames = [];
+  let searchHistory = JSON.parse(localStorage.getItem('mc-search-history') || '[]');
 
   const PROXY = 'https://corsproxy.io/?url=';
   const PROFILE_URL = u => `${PROXY}${encodeURIComponent(`https://api.mojang.com/users/profiles/minecraft/${u}`)}`;
-  const HISTORY_URL = id => `${PROXY}${encodeURIComponent(`https://api.mojang.com/user/profiles/${id}/names`)}`;
 
-  // ── Utils ──
   function setStatus(msg) {
     document.getElementById('status-bar').innerHTML = `<span>//</span> ${msg}`;
   }
@@ -565,38 +475,100 @@
     return /^[A-Za-z0-9_]{3,16}$/.test(name);
   }
 
+  // ── Search History ──
+  function saveToHistory(username, status) {
+    searchHistory = searchHistory.filter(e => e.username.toLowerCase() !== username.toLowerCase());
+    searchHistory.unshift({ username, status, time: Date.now() });
+    if (searchHistory.length > 200) searchHistory = searchHistory.slice(0, 200);
+    localStorage.setItem('mc-search-history', JSON.stringify(searchHistory));
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const filter = document.getElementById('sh-filter').value.toLowerCase();
+    const list = document.getElementById('sh-list');
+    document.getElementById('sh-count').textContent = searchHistory.length;
+    const filtered = searchHistory.filter(e => e.username.toLowerCase().includes(filter));
+
+    if (!filtered.length) {
+      list.innerHTML = `<div class="sh-empty">${searchHistory.length ? 'No Matches' : 'No History Yet'}</div>`;
+      return;
+    }
+
+    const badgeLabel = s => s === 'found' ? 'Found' : s === 'notfound' ? '404' : 'Error';
+    list.innerHTML = filtered.map(e => `
+      <div class="sh-item" onclick="prefillUsername('${e.username}')">
+        <div class="sh-item-left">
+          <span class="sh-dot ${e.status}"></span>
+          <span class="sh-name">${e.username}</span>
+        </div>
+        <div class="sh-item-right">
+          <span class="sh-badge ${e.status}">${badgeLabel(e.status)}</span>
+          <span class="sh-time">${timeAgo(e.time)}</span>
+        </div>
+      </div>`).join('');
+  }
+
+  function toggleHistory() {
+    const header = document.getElementById('sh-header');
+    const body = document.getElementById('sh-body');
+    const isOpen = body.classList.contains('visible');
+    header.classList.toggle('open', !isOpen);
+    body.classList.toggle('visible', !isOpen);
+  }
+
+  function clearHistory() {
+    searchHistory = [];
+    localStorage.removeItem('mc-search-history');
+    renderHistory();
+  }
+
+  function prefillUsername(name) {
+    document.getElementById('input-box').value = name;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function timeAgo(ts) {
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60) return `${s}s ago`;
+    if (s < 3600) return `${Math.floor(s/60)}m ago`;
+    if (s < 86400) return `${Math.floor(s/3600)}h ago`;
+    return `${Math.floor(s/86400)}d ago`;
+  }
+
+  // Init on load
+  renderHistory();
+
+  // ── Helpers ──
   function clearAll() {
     document.getElementById('input-box').value = '';
     document.getElementById('results-list').innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">⛏</div>
-        results will appear here
+        Results Will Appear Here
       </div>`;
     foundUsernames = [];
     notFoundUsernames = [];
-    setStatus('<span>//</span> cleared');
+    setStatus('Cleared');
   }
 
   function copyFound() {
     if (!foundUsernames.length) return;
     navigator.clipboard.writeText(foundUsernames.join('\n'));
-    setStatus('copied found usernames to clipboard');
+    setStatus('Copied Found Usernames To Clipboard');
   }
 
   function copyList(type) {
     const list = type === 'found' ? foundUsernames : notFoundUsernames;
-    if (!list.length) { setStatus('nothing to copy'); return; }
+    if (!list.length) { setStatus('Nothing To Copy'); return; }
     navigator.clipboard.writeText(list.join('\n'));
-    setStatus(`copied ${list.length} ${type === 'found' ? 'found' : 'not found'} username(s)`);
+    setStatus(`Copied ${list.length} ${type === 'found' ? 'Found' : 'Not Found'} Username(s)`);
   }
 
-  // ── Skeleton card ──
   function insertSkeleton(username) {
     const list = document.getElementById('results-list');
-    // Remove empty state
     const empty = list.querySelector('.empty-state');
     if (empty) empty.remove();
-
     const card = document.createElement('div');
     card.className = 'card loading';
     card.id = `card-${username.toLowerCase()}`;
@@ -604,13 +576,12 @@
       <div class="card-avatar skeleton"></div>
       <div class="card-info">
         <div class="card-name" style="color:var(--muted)">${username}</div>
-        <div class="card-sub">checking...</div>
+        <div class="card-sub">Checking...</div>
       </div>
       <div class="card-badge badge-loading">...</div>`;
     list.appendChild(card);
   }
 
-  // ── Replace skeleton ──
   function updateCard(username, data) {
     const card = document.getElementById(`card-${username.toLowerCase()}`);
     if (!card) return;
@@ -619,36 +590,18 @@
       const resolved = data.name || username;
       const uuid = data.id || '';
       const shortUuid = uuid ? uuid.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5') : '';
-      const hasHistory = data.historyEntries && data.historyEntries.length > 1;
-      const historyNote = data.historyEntries ? ` · ${data.historyEntries.length} name(s) in history` : '';
-      const cardId = username.toLowerCase();
-
       card.className = 'card ok';
-      card.style.flexWrap = 'wrap';
       card.innerHTML = `
         <div class="card-avatar">
           <img src="https://minotar.net/helm/${resolved}/48" alt="${resolved}" onerror="this.parentElement.style.background='#1a1a1a';this.remove()">
         </div>
         <div class="card-info">
           <div class="card-name">${resolved}</div>
-          <div class="card-sub">UUID: ${shortUuid}${historyNote}</div>
-          ${hasHistory ? '<div class="card-uuid">⚠ name changed</div>' : ''}
+          <div class="card-sub">UUID: ${shortUuid}</div>
         </div>
-        <div class="card-right">
-          <div class="card-badge badge-ok">FOUND</div>
-          ${data.historyEntries ? `<button class="history-btn" onclick="toggleHistory('${cardId}')">▾ history</button>` : ''}
-        </div>
-        ${data.historyEntries ? `
-        <div class="history-dropdown" id="hist-${cardId}">
-          <div class="history-dropdown-title">name history</div>
-          ${data.historyEntries.map((e, i) => `
-            <div class="history-entry">
-              <span class="history-name ${i === data.historyEntries.length - 1 ? 'current' : ''}">${e.name}</span>
-              <span class="history-date">${e.changedToAt ? new Date(e.changedToAt).toLocaleDateString() : 'original'}</span>
-            </div>`).join('')}
-        </div>` : ''}`;
-
+        <div class="card-badge badge-ok">Found</div>`;
       foundUsernames.push(resolved);
+      saveToHistory(resolved, 'found');
 
     } else if (data.notFound) {
       card.className = 'card notfound';
@@ -656,10 +609,11 @@
         <div class="card-avatar" style="display:flex;align-items:center;justify-content:center;font-size:22px;opacity:0.3">✗</div>
         <div class="card-info">
           <div class="card-name" style="color:var(--muted)">${username}</div>
-          <div class="card-sub">does not exist</div>
+          <div class="card-sub">Does Not Exist</div>
         </div>
         <div class="card-badge badge-notfound">404</div>`;
       notFoundUsernames.push(username);
+      saveToHistory(username, 'notfound');
 
     } else {
       card.className = 'card warn';
@@ -667,84 +621,44 @@
         <div class="card-avatar" style="display:flex;align-items:center;justify-content:center;font-size:22px;opacity:0.3">?</div>
         <div class="card-info">
           <div class="card-name" style="color:var(--warn)">${username}</div>
-          <div class="card-sub">${data.reason || 'request failed'}</div>
+          <div class="card-sub">${data.reason || 'Request Failed'}</div>
         </div>
-        <div class="card-badge badge-warn">ERROR</div>`;
+        <div class="card-badge badge-warn">Error</div>`;
+      saveToHistory(username, 'error');
     }
   }
 
-  // ── Toggle history dropdown ──
-  function toggleHistory(cardId) {
-    const dropdown = document.getElementById(`hist-${cardId}`);
-    const btn = dropdown?.previousElementSibling;
-    if (!dropdown) return;
-    const isOpen = dropdown.classList.contains('visible');
-    dropdown.classList.toggle('visible', !isOpen);
-    if (btn) {
-      btn.textContent = isOpen ? '▾ history' : '▴ history';
-      btn.classList.toggle('open', !isOpen);
-    }
-  }
-
-  // ── Fetch single username ──
-  async function checkUsername(username, tryHistory) {
+  async function checkUsername(username) {
     try {
       const res = await fetch(PROFILE_URL(username));
-
       if (res.status === 429) return { rateLimited: true };
       if (res.status === 404) return { notFound: true };
       if (!res.ok) return { ok: false, reason: `HTTP ${res.status}` };
-
       const data = await res.json();
-      const result = { ok: true, name: data.name, id: data.id };
-
-      if (tryHistory && data.id) {
-        try {
-          const hRes = await fetch(HISTORY_URL(data.id));
-          if (hRes.ok) {
-            const hData = await hRes.json();
-            result.historyEntries = hData; // [{name, changedToAt?}, ...]
-            result.changedName = hData.length > 1;
-          }
-        } catch {}
-      }
-
-      return result;
-    } catch (e) {
-      return { ok: false, reason: 'network error' };
+      return { ok: true, name: data.name, id: data.id };
+    } catch {
+      return { ok: false, reason: 'Network Error' };
     }
   }
 
-  // ── Retry rate-limited ──
-  async function retryRateLimited(usernames, tryHistory) {
-    const retried = [];
+  async function retryRateLimited(usernames) {
     for (const u of usernames) {
-      setStatus(`retrying rate-limited: ${u}...`);
+      setStatus(`Retrying Rate-Limited: ${u}...`);
       let success = false;
       for (let attempt = 1; attempt <= 3; attempt++) {
-        const wait = (3 + Math.random() * 3) * attempt * 1000;
-        await new Promise(r => setTimeout(r, wait));
-        const result = await checkUsername(u, tryHistory);
-        if (!result.rateLimited) {
-          updateCard(u, result);
-          success = true;
-          break;
-        }
-        setStatus(`still rate-limited: ${u} (attempt ${attempt}/3)...`);
+        await new Promise(r => setTimeout(r, (3 + Math.random() * 3) * attempt * 1000));
+        const result = await checkUsername(u);
+        if (!result.rateLimited) { updateCard(u, result); success = true; break; }
+        setStatus(`Still Rate-Limited: ${u} (Attempt ${attempt}/3)...`);
       }
-      if (!success) {
-        updateCard(u, { ok: false, reason: 'rate limited – gave up after 3 retries' });
-      }
-      retried.push(u);
+      if (!success) updateCard(u, { ok: false, reason: 'Rate Limited — Gave Up After 3 Retries' });
     }
-    return retried;
   }
 
-  // ── Main check ──
   async function startCheck() {
     if (running) {
       stopRequested = true;
-      setStatus('stopping after current batch...');
+      setStatus('Stopping After Current Batch...');
       document.getElementById('check-btn').disabled = true;
       return;
     }
@@ -754,62 +668,50 @@
     const usernames = lines.filter(u => validUsername(u));
     const invalid = lines.filter(u => !validUsername(u));
 
-    if (!usernames.length) {
-      setStatus('no valid usernames entered');
-      return;
-    }
+    if (!usernames.length) { setStatus('No Valid Usernames Entered'); return; }
 
-    // Reset
     foundUsernames = [];
     notFoundUsernames = [];
     running = true;
     stopRequested = false;
+
     const btn = document.getElementById('check-btn');
     btn.textContent = '⏹ Stop';
     btn.className = 'btn btn-stop';
 
-    const tryHistory = document.getElementById('history-toggle').checked;
     const concurrency = parseInt(document.getElementById('concurrency').value);
     const rateLimitedQueue = [];
 
-    // Clear old results and insert skeletons
     document.getElementById('results-list').innerHTML = '';
     for (const u of usernames) insertSkeleton(u);
-    if (invalid.length) setStatus(`checking ${usernames.length} valid username(s) — ${invalid.length} skipped (invalid)`);
-    else setStatus(`checking ${usernames.length} username(s)...`);
+    setStatus(invalid.length
+      ? `Checking ${usernames.length} Valid Username(s) — ${invalid.length} Skipped (Invalid)`
+      : `Checking ${usernames.length} Username(s)...`);
 
-    // Process in batches
     for (let i = 0; i < usernames.length; i += concurrency) {
       if (stopRequested) break;
       const batch = usernames.slice(i, i + concurrency);
-      const results = await Promise.all(batch.map(u => checkUsername(u, tryHistory)));
-
+      const results = await Promise.all(batch.map(u => checkUsername(u)));
       results.forEach((result, idx) => {
         const u = batch[idx];
-        if (result.rateLimited) {
-          rateLimitedQueue.push(u);
-        } else {
-          updateCard(u, result);
-        }
+        if (result.rateLimited) rateLimitedQueue.push(u);
+        else updateCard(u, result);
       });
-
-      setStatus(`checked ${Math.min(i + concurrency, usernames.length)} / ${usernames.length}...`);
+      setStatus(`Checked ${Math.min(i + concurrency, usernames.length)} / ${usernames.length}...`);
     }
 
-    // Handle rate-limited
     if (rateLimitedQueue.length) {
-      setStatus(`retrying ${rateLimitedQueue.length} rate-limited username(s)...`);
-      await retryRateLimited(rateLimitedQueue, tryHistory);
+      setStatus(`Retrying ${rateLimitedQueue.length} Rate-Limited Username(s)...`);
+      await retryRateLimited(rateLimitedQueue);
     }
 
-    // Done
     running = false;
     btn.textContent = '⛏ Check';
     btn.className = 'btn btn-primary';
     btn.disabled = false;
 
-    const stopped = stopRequested ? ' (stopped early)' : '';
-    setStatus(`done${stopped} — ✓ ${foundUsernames.length} found  ✗ ${notFoundUsernames.length} not found  · total: ${foundUsernames.length + notFoundUsernames.length}`);
+    const stopped = stopRequested ? ' (Stopped Early)' : '';
+    setStatus(`Done${stopped} — ✓ ${foundUsernames.length} Found  ✗ ${notFoundUsernames.length} Not Found  · Total: ${foundUsernames.length + notFoundUsernames.length}`);
   }
 </script>
 </body>
