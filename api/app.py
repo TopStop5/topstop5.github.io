@@ -19,6 +19,11 @@ from ebooklib import epub
 
 app = Flask(__name__)
 CORS(app)
+@app.after_request
+def add_cors(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
 
 
 # ── Site Config Registry ───────────────────────────────────────────────────────
@@ -187,6 +192,8 @@ async def fetch_chapter(
             async with sem:
                 await asyncio.sleep(REQUEST_DELAY)
                 r = await client.get(chapter_url, follow_redirects=True, timeout=20)
+            print(f"CH{ch_num} status={r.status_code} url={r.url}")
+            print(f"CH{ch_num} body preview: {r.text[:500]}")
 
             if r.status_code == 404:
                 raise ChapterNotFound(f"Chapter {ch_num} returned 404")

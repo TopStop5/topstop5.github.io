@@ -24,4 +24,4 @@ EXPOSE 8080
 
 # 2 workers × 4 threads handles concurrent SSE streams.
 # Timeout 120s is plenty — no Selenium cold-start overhead.
-CMD gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 2 --threads 4
+CMD gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1 --worker-class gevent

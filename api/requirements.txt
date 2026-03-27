@@ -5,3 +5,4 @@ beautifulsoup4==4.12.3
 lxml==5.3.0
 EbookLib==0.18
 gunicorn==23.0.0
+gevent==24.2.1
