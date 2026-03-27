@@ -120,27 +120,60 @@
     .submit-btn:hover { background: var(--accent-h); }
     .submit-btn:disabled { background: #222; color: var(--muted); cursor: not-allowed; }
 
-    .status-panel { background: var(--card); border: 1px solid #1a1a1a; border-radius: 12px; padding: 20px; display: none; }
-    .status-panel.visible { display: block; animation: slideIn 0.2s ease; }
-    @keyframes slideIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    /* ── Progress Block ── */
+    .progress-section { margin-bottom: 10px; display: none; }
+    .progress-section.visible { display: block; animation: slideIn 0.2s ease; }
 
-    .status-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-    .status-title { font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 3px; color: var(--accent); text-transform: uppercase; }
+    .progress-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 18px;
+      background: transparent;
+      border: 1px solid #1a1a1a;
+      border-radius: 10px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s;
+    }
+    .progress-toggle:hover { border-color: rgba(124,58,237,0.3); background: rgba(124,58,237,0.03); }
+    .progress-toggle.open { border-radius: 10px 10px 0 0; border-color: rgba(124,58,237,0.25); border-bottom-color: transparent; }
+
+    .progress-toggle-left { display: flex; align-items: center; gap: 10px; }
+    .progress-toggle-label { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: 0.5px; }
+
     .status-badge { font-family: 'Share Tech Mono', monospace; font-size: 10px; padding: 2px 8px; border-radius: 3px; letter-spacing: 0.5px; }
     .status-badge.running { color: var(--warn);    background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); }
     .status-badge.done    { color: var(--success); background: rgba(34,197,94,0.08);  border: 1px solid rgba(34,197,94,0.2); }
     .status-badge.error   { color: var(--error);   background: rgba(239,68,68,0.08);  border: 1px solid rgba(239,68,68,0.2); }
 
+    .progress-chevron { font-size: 10px; color: #333; transition: transform 0.2s, color 0.2s; }
+    .progress-toggle.open .progress-chevron { transform: rotate(180deg); color: var(--muted); }
+
+    .progress-body {
+      max-height: 0;
+      overflow: hidden;
+      border: 1px solid rgba(124,58,237,0.25);
+      border-top: none;
+      border-radius: 0 0 10px 10px;
+      background: #070707;
+      transition: max-height 0.25s ease, opacity 0.25s ease;
+      opacity: 0;
+    }
+    .progress-body.visible { max-height: 500px; opacity: 1; }
+
+    .progress-inner { padding: 16px 18px; }
+
     .progress-wrap { height: 3px; background: #111; border-radius: 2px; margin-bottom: 14px; overflow: hidden; }
     .progress-bar { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; transition: width 0.5s ease; }
 
-    .log { font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--muted); line-height: 1.9; min-height: 60px; max-height: 200px; overflow-y: auto; }
+    .log { font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--muted); line-height: 1.9; min-height: 40px; max-height: 180px; overflow-y: auto; }
     .log .ok   { color: var(--success); }
     .log .warn { color: var(--warn); }
     .log .err  { color: var(--error); }
     .log .info { color: var(--accent2); }
 
-    .download-area { margin-top: 16px; padding-top: 14px; border-top: 1px solid #111; display: none; }
+    .download-area { margin-top: 14px; padding-top: 12px; border-top: 1px solid #111; display: none; }
     .download-area.visible { display: block; }
     .download-link { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); border-radius: 8px; color: var(--success); text-decoration: none; font-size: 14px; font-weight: 700; letter-spacing: 1px; transition: all 0.2s; }
     .download-link:hover { background: rgba(34,197,94,0.18); }
@@ -391,7 +424,7 @@
           <span class="site-name">NovelFire</span>
           <span class="site-url">novelfire.net</span>
         </div>
-        <span class="site-status green">Full Support</span>
+        <span class="site-status green">Supported</span>
       </div>
       <div class="site-row">
         <span class="site-dot yellow"></span>
@@ -399,7 +432,7 @@
           <span class="site-name">WeTriedTLS</span>
           <span class="site-url">wetriedtls.com</span>
         </div>
-        <span class="site-status yellow">Supported</span>
+        <span class="site-status yellow">Coming Soon</span>
       </div>
       <div class="site-row">
         <span class="site-dot yellow"></span>
@@ -407,20 +440,28 @@
           <span class="site-name">Webnovel Translations</span>
           <span class="site-url">webnoveltranslations.net</span>
         </div>
-        <span class="site-status yellow">Supported</span>
+        <span class="site-status yellow">Comming Soon</span>
       </div>
     </div>
   </div>
 
-  <div class="status-panel" id="status-panel">
-    <div class="status-header">
-      <div class="status-title">Progress</div>
-      <span class="status-badge running" id="status-badge">Running</span>
+  <!-- Progress Block -->
+  <div class="progress-section" id="progress-section">
+    <div class="progress-toggle open" id="progress-toggle" onclick="toggleProgress()">
+      <div class="progress-toggle-left">
+        <span class="progress-toggle-label">Progress</span>
+        <span class="status-badge running" id="status-badge">Running</span>
+      </div>
+      <span class="progress-chevron" id="progress-chevron">▼</span>
     </div>
-    <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
-    <div class="log" id="log"></div>
-    <div class="download-area" id="download-area">
-      <a class="download-link" id="download-link">↓ Download File</a>
+    <div class="progress-body visible" id="progress-body">
+      <div class="progress-inner">
+        <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+        <div class="log" id="log"></div>
+        <div class="download-area" id="download-area">
+          <a class="download-link" id="download-link">↓ Download File</a>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -435,6 +476,14 @@
   const API_BASE = 'https://topstop5githubio-production.up.railway.app';
 
   let selectedFormat = 'txt';
+
+  function toggleProgress() {
+    const toggle = document.getElementById('progress-toggle');
+    const body = document.getElementById('progress-body');
+    const isOpen = body.classList.contains('visible');
+    toggle.classList.toggle('open', !isOpen);
+    body.classList.toggle('visible', !isOpen);
+  }
 
   function toggleSites() {
     const toggle = document.getElementById('sites-toggle');
@@ -491,7 +540,9 @@
     if (end - start > 99) { alert('Maximum 100 Chapters Per Request.'); return; }
 
     document.getElementById('scrape-btn').disabled = true;
-    document.getElementById('status-panel').classList.add('visible');
+    document.getElementById('progress-section').classList.add('visible');
+    document.getElementById('progress-body').classList.add('visible');
+    document.getElementById('progress-toggle').classList.add('open');
     document.getElementById('download-area').classList.remove('visible');
     document.getElementById('log').innerHTML = '';
     setProgress(0);

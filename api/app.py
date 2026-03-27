@@ -17,7 +17,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 try:
     from ebooklib import epub
@@ -40,6 +40,7 @@ def make_driver():
     opts.add_argument("--disable-extensions")
     opts.add_argument("--blink-settings=imagesEnabled=false")
     opts.add_argument("--log-level=3")
+    opts.add_argument("--window-size=1280,800")
 
     chrome_bin = os.environ.get("CHROME_BIN", "/usr/bin/chromium")
     chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")
@@ -51,9 +52,12 @@ def make_driver():
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
-def save_as_epub(chapters_dict, novel_title):
-    """chapters_dict: {chapter_num: content_str}. Returns epub bytes."""
+class ChapterNotFound(Exception):
+    """Raised when a chapter does not exist (sentinel text detected or 404)."""
+    pass
 
+
+def save_as_epub(chapters_dict, novel_title):
     def safe(name):
         return re.sub(r'[\\/*?:"<>|]', '-', name).strip()
 
@@ -77,7 +81,6 @@ def save_as_epub(chapters_dict, novel_title):
             f"<head><title>{html.escape(chap_title)}</title></head>"
             f"<body>{html_body}</body></html>"
         )
-
         ch = epub.EpubHtml(
             title=chap_title,
             file_name=f"chapter_{str(num).zfill(zero_pad)}.xhtml",
@@ -94,48 +97,37 @@ def save_as_epub(chapters_dict, novel_title):
 
     with tempfile.NamedTemporaryFile(suffix=".epub", delete=False) as f:
         tmp_path = f.name
-
     epub.write_epub(tmp_path, book)
-
     with open(tmp_path, "rb") as f:
         data = f.read()
-
     os.unlink(tmp_path)
     return data
 
 
 def make_zip(chapters_dict):
-    """Returns zip bytes of all chapters as .txt files."""
     buf = io.BytesIO()
-
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for num in sorted(chapters_dict.keys()):
             zf.writestr(f"Chapter {num}.txt", chapters_dict[num])
-
     buf.seek(0)
     return buf.read()
 
 
 # ── NovelFire ──────────────────────────────────────────────────────────────────
 
+NOVELFIRE_SENTINEL = "Some novel pages moved for better user experience"
+
+
 def normalize_novelfire_url(url):
-    """Always returns https://novelfire.net/book/<slug> regardless of what the user pastes."""
+    """Strip any /chapter-N suffix and return the clean book base URL."""
     parsed = urlparse(url)
     parts = parsed.path.strip("/").split("/")
-
     if "book" in parts:
         idx = parts.index("book")
-        # parts[idx+1] is the slug — everything after (e.g. chapter-N) is stripped
         if idx + 1 < len(parts):
             base = "/".join(parts[:idx + 2])
             return f"{parsed.scheme}://{parsed.netloc}/{base}"
-
     return url.rstrip("/")
-
-
-class ChapterNotFound(Exception):
-    """Raised when NovelFire shows the 'page moved' / chapter doesn't exist message."""
-    pass
 
 
 def scrape_novelfire_chapter(driver, base_url, ch_num):
@@ -146,34 +138,54 @@ def scrape_novelfire_chapter(driver, base_url, ch_num):
     except TimeoutException:
         driver.execute_script("window.stop();")
 
-    time.sleep(1.5)
+    # Wait for either the chapter container or the sentinel message
+    try:
+        WebDriverWait(driver, 12).until(
+            lambda d: (
+                len(d.find_elements(By.ID, "chapter-container")) > 0
+                or NOVELFIRE_SENTINEL in d.find_element(By.TAG_NAME, "body").text
+            )
+        )
+    except TimeoutException:
+        pass
 
-    # ── Check for "page moved" / chapter does not exist sentinel ──
-    SENTINEL = "Some novel pages moved for better user experience"
+    # Check for sentinel (chapter doesn't exist)
     try:
         body_text = driver.find_element(By.TAG_NAME, "body").text
-        if SENTINEL in body_text:
-            raise ChapterNotFound(f"Chapter {ch_num} does not exist (page moved sentinel detected)")
+        if NOVELFIRE_SENTINEL in body_text:
+            raise ChapterNotFound(f"Chapter {ch_num} does not exist")
     except ChapterNotFound:
         raise
     except Exception:
         pass
 
-    container = driver.find_element(By.ID, "chapter-container")
+    # Find container
+    try:
+        container = WebDriverWait(driver, 8).until(
+            EC.presence_of_element_located((By.ID, "chapter-container"))
+        )
+    except TimeoutException:
+        raise Exception(f"chapter-container not found for chapter {ch_num}")
 
+    # Get title
     title_text = ""
     try:
         title_text = driver.find_element(By.CLASS_NAME, "chapter-title").text.strip()
     except Exception:
         pass
 
+    # Get content root
     try:
         content_root = container.find_element(By.CLASS_NAME, "chapter-content")
     except Exception:
         content_root = container
 
+    # Remove ads
     for ad in content_root.find_elements(By.CSS_SELECTOR, ".nf-ads"):
-        driver.execute_script("arguments[0].remove();", ad)
+        try:
+            driver.execute_script("arguments[0].remove();", ad)
+        except Exception:
+            pass
 
     final_lines = []
     if title_text:
@@ -194,6 +206,7 @@ def scrape_novelfire_chapter(driver, base_url, ch_num):
             continue
         final_lines.append(text)
 
+    # Fallback if <p> tags yielded nothing
     if len(final_lines) <= (1 if title_text else 0):
         for line in content_root.text.split("\n"):
             line = line.strip()
@@ -212,9 +225,9 @@ def scrape_novelfire(novel_url, start, end):
     driver = make_driver()
     chapters = {}
     failed = []
-    end_of_novel = None  # chapter number where sentinel was hit
+    end_of_novel = None
 
-    # Extract title from slug — no need to load the homepage
+    # Extract title from slug without loading homepage
     try:
         parsed = urlparse(novel_url)
         parts = parsed.path.strip("/").split("/")
@@ -230,13 +243,12 @@ def scrape_novelfire(novel_url, start, end):
                 content = scrape_novelfire_chapter(driver, base_url, ch)
                 chapters[ch] = content
             except ChapterNotFound:
-                # No more chapters exist — stop immediately, don't retry
                 end_of_novel = ch
                 break
             except Exception:
                 failed.append(ch)
 
-        # Retry genuinely failed chapters (network issues etc.) but not sentinel ones
+        # Retry failed chapters once (network blips, not sentinel)
         for ch in list(failed):
             try:
                 time.sleep(2)
@@ -244,7 +256,7 @@ def scrape_novelfire(novel_url, start, end):
                 chapters[ch] = content
                 failed.remove(ch)
             except ChapterNotFound:
-                failed.remove(ch)  # not a scrape failure, chapter just doesn't exist
+                failed.remove(ch)
             except Exception:
                 pass
 
@@ -265,7 +277,6 @@ def scrape_wetriedtls(novel_url, start, end):
     try:
         driver.get(novel_url)
         time.sleep(2)
-
         try:
             novel_title = driver.find_element(By.TAG_NAME, "h1").text.strip()
         except Exception:
@@ -284,7 +295,6 @@ def scrape_wetriedtls(novel_url, start, end):
                 chapters[ch_num] = "\n\n".join(lines)
             except Exception:
                 failed.append(ch_num)
-
             time.sleep(random.uniform(0.5, 1.2))
 
         for ch in list(failed):
@@ -319,26 +329,17 @@ def scrape_webnoveltranslations(novel_url, start, end):
     try:
         driver.get(novel_url)
         time.sleep(2)
-
         try:
             novel_title = driver.find_element(By.TAG_NAME, "h1").text.strip()
         except Exception:
             novel_title = driver.title.split("|")[0].strip()
-
-        novel_title = re.sub(
-            r"(\s*[-:]\s*Chapter\s*\d+)$",
-            "",
-            novel_title,
-            flags=re.IGNORECASE
-        )
+        novel_title = re.sub(r"(\s*[-:]\s*Chapter\s*\d+)$", "", novel_title, flags=re.IGNORECASE)
 
         for ch_num in range(start, end + 1):
             base = novel_url.rstrip("/")
             chapter_url = f"{base}/chapter-{ch_num}/"
-
             driver.execute_script("window.open('');")
             driver.switch_to.window(driver.window_handles[-1])
-
             try:
                 driver.get(chapter_url)
                 WebDriverWait(driver, 10).until(
@@ -347,15 +348,12 @@ def scrape_webnoveltranslations(novel_url, start, end):
                 container = driver.find_element(By.CSS_SELECTOR, "div#novel-chapter-container")
                 paragraphs = container.find_elements(By.TAG_NAME, "p")
                 lines = [p.text.strip() for p in paragraphs if p.text.strip()]
-
                 if lines:
                     chapters[ch_num] = "\n\n".join(lines)
                 else:
                     failed.append(ch_num)
-
             except Exception:
                 failed.append(ch_num)
-
             finally:
                 driver.close()
                 driver.switch_to.window(driver.window_handles[0])
@@ -373,7 +371,7 @@ def scrape_webnoveltranslations(novel_url, start, end):
 def root():
     return jsonify({
         "status": "ok",
-        "message": "TopStop5 Novel Scraper API is running",
+        "message": "TopStop5 Novel Scraper API",
         "routes": ["/", "/health", "/scrape"]
     })
 
@@ -392,52 +390,45 @@ def scrape():
 
     try:
         start = int(data.get("start", 1))
-        end = int(data.get("end", 1))
+        end   = int(data.get("end", 1))
     except (TypeError, ValueError):
         return jsonify({"error": "Start and end must be valid integers."}), 400
 
     if start < 1 or end < 1:
         return jsonify({"error": "Start and end must be 1 or greater."}), 400
-
     if end < start:
-        return jsonify({"error": "End chapter must be greater than or equal to start chapter."}), 400
-
+        return jsonify({"error": "End chapter must be >= start chapter."}), 400
     if end - start > 99:
         return jsonify({"error": "Maximum 100 chapters per request."}), 400
-
     if not url:
         return jsonify({"error": "No URL provided."}), 400
-
     if fmt not in {"txt", "epub"}:
         return jsonify({"error": "Invalid format. Use 'txt' or 'epub'."}), 400
 
-    if "novelfire" in url:
-        scrape_fn = scrape_novelfire
-        is_novelfire = True
-    elif "wetriedtls" in url:
-        scrape_fn = scrape_wetriedtls
-        is_novelfire = False
-    elif "webnoveltranslations" in url:
-        scrape_fn = scrape_webnoveltranslations
-        is_novelfire = False
-    else:
-        return jsonify({
-            "error": "Unsupported site. Supported: novelfire, wetriedtls, webnoveltranslations"
-        }), 400
+    end_of_novel = None
 
-    try:
-        if is_novelfire:
-            novel_title, chapters, failed, end_of_novel = scrape_fn(url, start, end)
-        else:
-            novel_title, chapters, failed = scrape_fn(url, start, end)
-            end_of_novel = None
-    except Exception as e:
-        return jsonify({"error": f"Scrape failed: {str(e)}"}), 500
+    if "novelfire" in url:
+        try:
+            novel_title, chapters, failed, end_of_novel = scrape_novelfire(url, start, end)
+        except Exception as e:
+            return jsonify({"error": f"Scrape failed: {str(e)}"}), 500
+    elif "wetriedtls" in url:
+        try:
+            novel_title, chapters, failed = scrape_wetriedtls(url, start, end)
+        except Exception as e:
+            return jsonify({"error": f"Scrape failed: {str(e)}"}), 500
+    elif "webnoveltranslations" in url:
+        try:
+            novel_title, chapters, failed = scrape_webnoveltranslations(url, start, end)
+        except Exception as e:
+            return jsonify({"error": f"Scrape failed: {str(e)}"}), 500
+    else:
+        return jsonify({"error": "Unsupported site."}), 400
 
     if not chapters:
         msg = "No chapters could be scraped."
         if end_of_novel is not None:
-            msg = f"Chapter {end_of_novel} does not exist — the novel ends before that chapter."
+            msg = f"Chapter {end_of_novel} does not exist — novel ends before that."
         return jsonify({"error": msg, "failed": failed, "end_of_novel": end_of_novel}), 500
 
     safe_title = re.sub(r'[\\/*?:"<>|]', "-", novel_title).strip() or "Novel"
@@ -446,24 +437,14 @@ def scrape():
         epub_bytes = save_as_epub(chapters, novel_title)
         buf = io.BytesIO(epub_bytes)
         buf.seek(0)
-        return send_file(
-            buf,
-            mimetype="application/epub+zip",
-            as_attachment=True,
-            download_name=f"{safe_title}.epub"
-        )
+        return send_file(buf, mimetype="application/epub+zip", as_attachment=True, download_name=f"{safe_title}.epub")
 
     zip_bytes = make_zip(chapters)
     buf = io.BytesIO(zip_bytes)
     buf.seek(0)
-    return send_file(
-        buf,
-        mimetype="application/zip",
-        as_attachment=True,
-        download_name=f"{safe_title}.zip"
-    )
+    return send_file(buf, mimetype="application/zip", as_attachment=True, download_name=f"{safe_title}.zip")
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
