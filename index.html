@@ -29,7 +29,6 @@
       overflow: hidden;
     }
 
-    /* Grid background */
     body::before {
       content: '';
       position: fixed;
@@ -42,7 +41,6 @@
       z-index: 0;
     }
 
-    /* Glow orb */
     body::after {
       content: '';
       position: fixed;
@@ -67,12 +65,7 @@
       gap: 48px;
     }
 
-    .brand {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-    }
+    .brand { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 
     .brand-tag {
       font-family: 'Share Tech Mono', monospace;
@@ -94,9 +87,7 @@
       animation: fadeUp 0.7s ease forwards 0.4s;
     }
 
-    .brand-name span {
-      color: var(--accent2);
-    }
+    .brand-name span { color: var(--accent2); }
 
     .divider {
       width: 60px;
@@ -145,7 +136,6 @@
     }
 
     .nav-link:hover::before { left: 100%; }
-
     .nav-link:hover {
       border-color: var(--accent);
       background: rgba(124,58,237,0.12);
@@ -153,10 +143,7 @@
       transform: translateX(4px);
     }
 
-    .nav-link .icon {
-      font-size: 18px;
-      opacity: 0.8;
-    }
+    .nav-link .icon { font-size: 18px; opacity: 0.8; }
 
     .nav-link .arrow {
       margin-left: auto;
@@ -166,10 +153,7 @@
       transition: all 0.2s ease;
     }
 
-    .nav-link:hover .arrow {
-      opacity: 1;
-      transform: translateX(0);
-    }
+    .nav-link:hover .arrow { opacity: 1; transform: translateX(0); }
 
     .footer {
       font-family: 'Share Tech Mono', monospace;
@@ -206,9 +190,14 @@
         Username Checker
         <span class="arrow">→</span>
       </a>
+      <a href="novelscraper.html" class="nav-link">
+        <span class="icon">📖</span>
+        Novel Scraper
+        <span class="arrow">→</span>
+      </a>
     </nav>
 
-    <div class="footer">Minecraft · Tools · Utilities</div>
+    <div class="footer">Novels · Games · Tools · Utilities</div>
   </div>
 </body>
 </html>
