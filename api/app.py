@@ -41,7 +41,7 @@ def make_driver():
     opts.add_argument("--blink-settings=imagesEnabled=false")
     opts.add_argument("--log-level=3")
 
-    chrome_bin = os.environ.get("CHROME_BIN", "/usr/bin/google-chrome")
+    chrome_bin = os.environ.get("CHROME_BIN", "/usr/bin/chromium")
     chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")
 
     opts.binary_location = chrome_bin
