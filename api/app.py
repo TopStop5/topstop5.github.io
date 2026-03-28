@@ -11,7 +11,7 @@ import textwrap
 import zipfile
 from urllib.parse import urlparse
 
-import cloudscraper
+from curl_cffi import requests as cffi_requests
 from bs4 import BeautifulSoup
 from flask import Flask, request, jsonify, send_file, Response, stream_with_context
 from flask_cors import CORS
@@ -40,8 +40,8 @@ def add_cors(response):
 
 SITE_CONFIG = {
     "novelfire.net": {
-        "content_sel":  "#chapter-container .chapter-content",
-        "title_sel":    ".chapter-title",
+        "content_sel":  "#content",
+        "title_sel":    "span.chapter-title",
         "url_pattern":  "{base}/chapter-{num}",
         "remove_sels":  [".nf-ads"],
         "stop_phrases": [
@@ -72,19 +72,10 @@ SITE_CONFIG = {
     },
 }
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    ),
-    "Accept-Language": "en-US,en;q=0.9",
-}
-
-MAX_CONCURRENT = 5
+MAX_CONCURRENT = 3
 RETRY_ATTEMPTS = 3
 RETRY_DELAY    = 2.0
-REQUEST_DELAY  = 0.3
+REQUEST_DELAY  = 0.5
 
 
 # ── Custom Exceptions ──────────────────────────────────────────────────────────
@@ -119,7 +110,7 @@ def get_novel_title_from_url(url: str) -> str:
 # ── Text Extraction ────────────────────────────────────────────────────────────
 
 def extract_chapter_text(html_text: str, config: dict, ch_num: int) -> str:
-    """Parse HTML and return clean chapter text."""
+    """Parse HTML and return clean chapter text, double-spaced between paragraphs."""
     soup = BeautifulSoup(html_text, "html.parser")
 
     # Sentinel check — means chapter doesn't exist
@@ -173,22 +164,26 @@ def extract_chapter_text(html_text: str, config: dict, ch_num: int) -> str:
     if not lines:
         raise Exception(f"No text extracted for chapter {ch_num}")
 
-    wrapped = [textwrap.fill(line, width=80) for line in lines]
-    return "\n\n".join(wrapped)
+    # Double-space: every paragraph separated by a blank line (\n\n)
+    return "\n\n".join(lines)
 
 
 # ── Async Fetcher ──────────────────────────────────────────────────────────────
 
 def fetch_chapter_sync(chapter_url: str, config: dict, ch_num: int) -> str:
-    """Sync fetch using cloudscraper to bypass Cloudflare JS challenges."""
-    scraper = cloudscraper.create_scraper(
-        browser={"browser": "chrome", "platform": "windows", "mobile": False}
-    )
+    """
+    Sync fetch using curl_cffi to impersonate a real Chrome TLS fingerprint,
+    bypassing Cloudflare Turnstile / Bot Management (the 'Just a moment...' page).
+    """
     last_exc = None
     for attempt in range(RETRY_ATTEMPTS):
         try:
             time.sleep(REQUEST_DELAY)
-            r = scraper.get(chapter_url, headers=HEADERS, timeout=20)
+            r = cffi_requests.get(
+                chapter_url,
+                impersonate="chrome120",
+                timeout=20,
+            )
             print(f"CH{ch_num} status={r.status_code} url={r.url}")
             print(f"CH{ch_num} body preview: {r.text[:300]}")
 
@@ -215,7 +210,7 @@ async def fetch_chapter(
     config: dict,
     ch_num: int,
 ) -> str:
-    """Async wrapper — runs cloudscraper in a thread executor so it doesn't block the event loop."""
+    """Async wrapper — runs curl_cffi in a thread executor so it doesn't block the event loop."""
     async with sem:
         return await loop.run_in_executor(
             None, fetch_chapter_sync, chapter_url, config, ch_num
@@ -362,7 +357,8 @@ def build_epub(chapters_dict: dict, novel_title: str) -> bytes:
     for num in sorted(chapters_dict.keys()):
         text = chapters_dict[num]
         chap_title = f"Chapter {num}"
-        paras = [p.strip() for p in re.split(r"(?:\r?\n){2,}", text) if p.strip()]
+        # Each paragraph is already separated by \n\n — split and render as <p> tags
+        paras = [p.strip() for p in re.split(r"\n\n", text) if p.strip()]
         html_body = "".join(f"<p>{html.escape(p)}</p>" for p in paras)
         html_doc = (
             '<?xml version="1.0" encoding="utf-8"?>'
