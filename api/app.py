@@ -27,7 +27,6 @@ def add_cors(response):
 
 
 # ── Site Config Registry ───────────────────────────────────────────────────────
-# To add a new site, add one entry here. No other code changes needed.
 #
 # Keys:
 #   content_sel   : CSS selector for the chapter text container
@@ -42,6 +41,7 @@ SITE_CONFIG = {
     "novelfire.net": {
         "content_sel":  "#content",
         "title_sel":    "span.chapter-title",
+        "cover_sel":    "figure.cover img",
         "url_pattern":  "{base}/chapter-{num}",
         "remove_sels":  [".nf-ads"],
         "stop_phrases": [
@@ -105,6 +105,44 @@ def get_novel_title_from_url(url: str) -> str:
         if part and not part.startswith("chapter"):
             return part.replace("-", " ").title()
     return "Novel"
+
+
+# ── Cover Fetcher ─────────────────────────────────────────────────────────────
+
+def fetch_cover_image(base_url: str, config: dict):
+    """
+    Fetch the novel cover image bytes + media type from the novel index page.
+    Returns (image_bytes, media_type) or (None, None) if unavailable.
+    """
+    cover_sel = config.get("cover_sel")
+    if not cover_sel:
+        return None, None
+    try:
+        r = cffi_requests.get(base_url, impersonate="chrome120", timeout=20)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, "html.parser")
+        img = soup.select_one(cover_sel)
+        if not img or not img.get("src"):
+            print(f"Cover selector '{cover_sel}' not found at {base_url}")
+            return None, None
+        img_url = img["src"]
+        if img_url.startswith("//"):
+            img_url = "https:" + img_url
+        elif img_url.startswith("/"):
+            parsed = urlparse(base_url)
+            img_url = f"{parsed.scheme}://{parsed.netloc}{img_url}"
+        print(f"Fetching cover: {img_url}")
+        img_r = cffi_requests.get(img_url, impersonate="chrome120", timeout=20)
+        img_r.raise_for_status()
+        ext = img_url.split("?")[0].rsplit(".", 1)[-1].lower()
+        media_type = {
+            "jpg": "image/jpeg", "jpeg": "image/jpeg",
+            "png": "image/png", "webp": "image/webp", "gif": "image/gif",
+        }.get(ext, "image/jpeg")
+        return img_r.content, media_type
+    except Exception as e:
+        print(f"Cover fetch failed: {e}")
+        return None, None
 
 
 # ── Text Extraction ────────────────────────────────────────────────────────────
@@ -341,7 +379,7 @@ def scrape_with_selenium(
 
 # ── Output Builders ────────────────────────────────────────────────────────────
 
-def build_epub(chapters_dict: dict, novel_title: str) -> bytes:
+def build_epub(chapters_dict: dict, novel_title: str, cover_image: bytes = None, cover_media_type: str = "image/jpeg") -> bytes:
     def safe(name):
         return re.sub(r'[\\/*?:"<>|]', "-", name).strip()
 
@@ -349,7 +387,19 @@ def build_epub(chapters_dict: dict, novel_title: str) -> bytes:
     book.set_identifier(safe(novel_title.lower()) or "novel")
     book.set_title(novel_title)
     book.set_language("en")
-    book.add_author("TopStop5's NovelScraper")
+    book.add_author("TopStop5's Novel Scraper")
+
+    # Embed cover image if available
+    if cover_image:
+        ext = cover_media_type.split("/")[-1].replace("jpeg", "jpg")
+        cover_item = epub.EpubItem(
+            uid="cover-image",
+            file_name=f"images/cover.{ext}",
+            media_type=cover_media_type,
+            content=cover_image,
+        )
+        book.add_item(cover_item)
+        book.set_cover(f"images/cover.{ext}", cover_image)
 
     epub_chapters = []
     zero_pad = len(str(max(chapters_dict.keys())))
@@ -530,9 +580,14 @@ def scrape_stream():
 
         safe_title = re.sub(r'[\\/*?:"<>|]', "-", novel_title).strip() or "Novel"
 
+        # Fetch cover for epub
+        cover_image, cover_media_type = None, "image/jpeg"
+        if fmt == "epub":
+            cover_image, cover_media_type = fetch_cover_image(base_url, config)
+
         try:
             if fmt == "epub":
-                file_bytes = build_epub(chapters, novel_title)
+                file_bytes = build_epub(chapters, novel_title, cover_image, cover_media_type or "image/jpeg")
                 filename   = f"{safe_title}.epub"
                 mimetype   = "application/epub+zip"
             else:
@@ -597,7 +652,8 @@ def scrape():
     safe_title = re.sub(r'[\\/*?:"<>|]', "-", novel_title).strip() or "Novel"
 
     if fmt == "epub":
-        buf = io.BytesIO(build_epub(chapters, novel_title))
+        cover_image, cover_media_type = fetch_cover_image(base_url, config)
+        buf = io.BytesIO(build_epub(chapters, novel_title, cover_image, cover_media_type or "image/jpeg"))
         return send_file(buf, mimetype="application/epub+zip",
                          as_attachment=True, download_name=f"{safe_title}.epub")
 
