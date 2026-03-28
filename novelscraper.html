@@ -72,7 +72,7 @@
     .coll-label-right { display: flex; align-items: center; gap: 8px; }
     .coll-chevron { font-size: 10px; color: #333; transition: transform 0.22s, color 0.22s; }
     .coll-toggle.open .coll-chevron { transform: rotate(180deg); color: var(--muted); }
-    .coll-body { max-height: 0; overflow: hidden; border: 1px solid rgba(124,58,237,0.25); border-top: none; border-radius: 0 0 10px 10px; background: #070707; opacity: 0; transition: max-height 0.3s ease, opacity 0.25s ease; }
+    .coll-body { max-height: 0; overflow: hidden; border: 1px solid rgba(124,58,237,0.25); border-top: none; border-radius: 0 0 10px 10px; background: #070707; opacity: 0; transition: max-height 0.45s ease, opacity 0.4s ease; }
     .coll-body.visible { max-height: 600px; opacity: 1; }
 
     /* Status badge */
@@ -187,9 +187,9 @@
         <span class="site-status green">Supported</span>
       </div>
       <div class="site-row">
-        <span class="site-dot yellow"></span>
+        <span class="site-dot green"></span>
         <div class="site-info"><span class="site-name">WeTriedTLS</span><span class="site-url">Wetriedtls.com</span></div>
-        <span class="site-status yellow">Coming Soon</span>
+        <span class="site-status green">Supported</span>
       </div>
       <div class="site-row">
         <span class="site-dot yellow"></span>
@@ -248,7 +248,7 @@
   function onSiteChange() {
     const ph = {
       novelfire:            'https://novelfire.net/book/your-novel-slug',
-      wetriedtls:           'https://wetriedtls.com/novel/your-novel',
+      wetriedtls:           'https://wetriedtls.com/series/your-novel-slug',
       webnoveltranslations: 'https://webnoveltranslations.net/novel/your-novel',
     };
     document.getElementById('novel-url').placeholder =

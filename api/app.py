@@ -54,13 +54,15 @@ SITE_CONFIG = {
         "needs_js":     False,
     },
     "wetriedtls.com": {
-        "content_sel":  "#reader-container",
-        "title_sel":    "h1.entry-title",
+        "content_sel":  ".container .reader-container",
+        "title_sel":    None,
+        "cover_sel":    "img.rounded",
         "url_pattern":  "{base}/chapter-{num}",
         "remove_sels":  [],
         "stop_phrases": [],
         "sentinel":     None,
         "needs_js":     False,
+        "hr_separator": True,   # split TL credit from chapter at <div data-type="horizontalRule">
     },
     "webnoveltranslations.net": {
         "content_sel":  "#novel-chapter-container",
@@ -123,10 +125,17 @@ def fetch_cover_image(base_url: str, config: dict):
         r.raise_for_status()
         soup = BeautifulSoup(r.text, "html.parser")
         img = soup.select_one(cover_sel)
-        if not img or not img.get("src"):
+        if not img or not (img.get("src") or img.get("srcset")):
             print(f"Cover selector '{cover_sel}' not found at {base_url}")
             return None, None
-        img_url = img["src"]
+        # WeTriedTLS uses Next.js /_next/image?url=<encoded_real_url> — decode it
+        img_url = img.get("src", "")
+        if "/_next/image" in img_url and "url=" in img_url:
+            from urllib.parse import parse_qs, urlparse as _up, unquote
+            qs = parse_qs(_up(img_url).query)
+            img_url = unquote(qs.get("url", [""])[0])
+        if not img_url:
+            return None, None
         if img_url.startswith("//"):
             img_url = "https:" + img_url
         elif img_url.startswith("/"):
@@ -175,8 +184,64 @@ def extract_chapter_text(html_text: str, config: dict, ch_num: int) -> str:
         if title_el:
             title_text = title_el.get_text(strip=True)
 
-    # Extract paragraphs
     stop_phrases = config.get("stop_phrases", [])
+
+    # ── WeTriedTLS special handling ────────────────────────────────────────────
+    # Structure: TL credit / <div data-type="horizontalRule"> / chapter body /
+    # <div data-type="horizontalRule"> / footer credit.
+    # We strip the credit blocks and render the hr divs as bold separator lines.
+    if config.get("hr_separator"):
+        from bs4 import Tag, NavigableString
+        hr_divs = container.find_all("div", attrs={"data-type": "horizontalRule"})
+
+        if hr_divs:
+            HR_MARKER = "─" * 60
+
+            # Collect everything AFTER the first hr div
+            chapter_els = []
+            recording = False
+            for el in container.children:
+                if el == hr_divs[0]:
+                    recording = True
+                    continue
+                if recording:
+                    chapter_els.append(el)
+
+            lines = []
+            if title_text:
+                lines.append(title_text)
+
+            for el in chapter_els:
+                if isinstance(el, NavigableString):
+                    t = str(el).strip()
+                    if t:
+                        lines.append(t)
+                    continue
+                if not isinstance(el, Tag):
+                    continue
+                if el.get("data-type") == "horizontalRule":
+                    lines.append(HR_MARKER)
+                    continue
+                if el.name == "p":
+                    text = el.get_text(strip=True)
+                    if text and text != title_text:
+                        if any(text.startswith(ph) for ph in stop_phrases):
+                            break
+                        lines.append(text)
+                else:
+                    for p in el.find_all("p"):
+                        text = p.get_text(strip=True)
+                        if text and text != title_text:
+                            if any(text.startswith(ph) for ph in stop_phrases):
+                                break
+                            lines.append(text)
+
+            if not lines:
+                raise Exception(f"No text extracted for chapter {ch_num}")
+            return "\n\n".join(lines)
+        # Fallthrough to generic extraction if no hr divs found
+
+    # ── Generic extraction ─────────────────────────────────────────────────────
     lines = []
     if title_text:
         lines.append(title_text)
