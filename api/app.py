@@ -11,7 +11,7 @@ import textwrap
 import zipfile
 from urllib.parse import urlparse
 
-import httpx
+import cloudscraper
 from bs4 import BeautifulSoup
 from flask import Flask, request, jsonify, send_file, Response, stream_with_context
 from flask_cors import CORS
@@ -179,21 +179,18 @@ def extract_chapter_text(html_text: str, config: dict, ch_num: int) -> str:
 
 # ── Async Fetcher ──────────────────────────────────────────────────────────────
 
-async def fetch_chapter(
-    client: httpx.AsyncClient,
-    sem: asyncio.Semaphore,
-    chapter_url: str,
-    config: dict,
-    ch_num: int,
-) -> str:
+def fetch_chapter_sync(chapter_url: str, config: dict, ch_num: int) -> str:
+    """Sync fetch using cloudscraper to bypass Cloudflare JS challenges."""
+    scraper = cloudscraper.create_scraper(
+        browser={"browser": "chrome", "platform": "windows", "mobile": False}
+    )
     last_exc = None
     for attempt in range(RETRY_ATTEMPTS):
         try:
-            async with sem:
-                await asyncio.sleep(REQUEST_DELAY)
-                r = await client.get(chapter_url, follow_redirects=True, timeout=20)
+            time.sleep(REQUEST_DELAY)
+            r = scraper.get(chapter_url, headers=HEADERS, timeout=20)
             print(f"CH{ch_num} status={r.status_code} url={r.url}")
-            print(f"CH{ch_num} body preview: {r.text[:500]}")
+            print(f"CH{ch_num} body preview: {r.text[:300]}")
 
             if r.status_code == 404:
                 raise ChapterNotFound(f"Chapter {ch_num} returned 404")
@@ -206,9 +203,23 @@ async def fetch_chapter(
         except Exception as e:
             last_exc = e
             if attempt < RETRY_ATTEMPTS - 1:
-                await asyncio.sleep(RETRY_DELAY * (attempt + 1))
+                time.sleep(RETRY_DELAY * (attempt + 1))
 
     raise last_exc
+
+
+async def fetch_chapter(
+    loop,
+    sem: asyncio.Semaphore,
+    chapter_url: str,
+    config: dict,
+    ch_num: int,
+) -> str:
+    """Async wrapper — runs cloudscraper in a thread executor so it doesn't block the event loop."""
+    async with sem:
+        return await loop.run_in_executor(
+            None, fetch_chapter_sync, chapter_url, config, ch_num
+        )
 
 
 async def scrape_all_chapters(
@@ -228,46 +239,46 @@ async def scrape_all_chapters(
     failed = []
     total = end - start + 1
     url_pattern = config["url_pattern"]
+    loop = asyncio.get_event_loop()
 
-    async with httpx.AsyncClient(headers=HEADERS, timeout=20) as client:
-        # Create all tasks upfront so they can run concurrently
-        tasks = {
-            ch_num: asyncio.create_task(
-                fetch_chapter(
-                    client, sem,
-                    url_pattern.format(base=base_url, num=ch_num),
-                    config, ch_num
-                )
+    # Create all tasks upfront so they can run concurrently
+    tasks = {
+        ch_num: asyncio.create_task(
+            fetch_chapter(
+                loop, sem,
+                url_pattern.format(base=base_url, num=ch_num),
+                config, ch_num
             )
-            for ch_num in range(start, end + 1)
-        }
+        )
+        for ch_num in range(start, end + 1)
+    }
 
-        done_count = 0
-        novel_ended = False
+    done_count = 0
+    novel_ended = False
 
-        for ch_num in range(start, end + 1):
-            if novel_ended:
-                tasks[ch_num].cancel()
-                continue
+    for ch_num in range(start, end + 1):
+        if novel_ended:
+            tasks[ch_num].cancel()
+            continue
 
-            try:
-                text = await tasks[ch_num]
-                chapters[ch_num] = text
-                ok = True
-            except ChapterNotFound:
-                novel_ended = True
-                ok = False
-                done_count += 1
-                if progress_cb:
-                    progress_cb(done_count, total, ch_num, ok, end_of_novel=ch_num)
-                continue
-            except Exception:
-                failed.append(ch_num)
-                ok = False
-
+        try:
+            text = await tasks[ch_num]
+            chapters[ch_num] = text
+            ok = True
+        except ChapterNotFound:
+            novel_ended = True
+            ok = False
             done_count += 1
             if progress_cb:
-                progress_cb(done_count, total, ch_num, ok)
+                progress_cb(done_count, total, ch_num, ok, end_of_novel=ch_num)
+            continue
+        except Exception:
+            failed.append(ch_num)
+            ok = False
+
+        done_count += 1
+        if progress_cb:
+            progress_cb(done_count, total, ch_num, ok)
 
     return chapters, failed
 
