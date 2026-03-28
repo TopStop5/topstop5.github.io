@@ -22,5 +22,6 @@ COPY app.py .
 
 EXPOSE 8080
 
-# 1 worker with gevent handles concurrent SSE streams without blocking.
-CMD gunicorn app:app --bind 0.0.0.0:$PORT --timeout 300 --workers 1 --worker-class gevent
+# gthread workers: each request gets its own thread, so asyncio.run() per request
+# is fully isolated. 4 workers x 4 threads = 16 concurrent scrapes without event loop conflicts.
+CMD gunicorn app:app --bind 0.0.0.0:$PORT --timeout 300 --workers 4 --worker-class gthread --threads 4
