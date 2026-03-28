@@ -216,6 +216,67 @@
     input[type=range] { accent-color: var(--accent); width: 90px; }
     #concurrency-val { font-family: 'Share Tech Mono', monospace; font-size: 13px; color: var(--accent); min-width: 20px; }
 
+    /* ── Proxy Selector ── */
+    .proxy-section { width: 100%; margin-top: 4px; }
+
+    .proxy-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 14px;
+      background: transparent;
+      border: 1px solid #1a1a1a;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+      transition: border-color 0.2s, background 0.2s;
+      width: 100%;
+    }
+    .proxy-toggle:hover { border-color: rgba(124,58,237,0.4); background: rgba(124,58,237,0.04); }
+    .proxy-toggle.open { border-radius: 8px 8px 0 0; border-color: rgba(124,58,237,0.35); border-bottom-color: transparent; }
+
+    /* flex:1 on left pushes chevron to the true right edge */
+    .proxy-toggle-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+    .proxy-toggle-label { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: 0.5px; white-space: nowrap; }
+    .proxy-active-name { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--accent2); padding: 2px 8px; border-radius: 3px; background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.25); letter-spacing: 0.5px; white-space: nowrap; }
+
+    /* chevron: visible color, sits at far right with a small left margin */
+    .proxy-chevron { font-size: 10px; color: var(--muted); margin-left: 8px; flex-shrink: 0; transition: transform 0.22s ease; }
+    .proxy-toggle.open .proxy-chevron { transform: rotate(180deg); }
+
+    /* dropdown: no overflow:hidden animation — use display toggle via grid rows trick */
+    .proxy-body {
+      display: grid;
+      grid-template-rows: 0fr;
+      border: 1px solid rgba(124,58,237,0.35);
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      background: #111;
+      transition: grid-template-rows 0.25s ease;
+      overflow: hidden;
+    }
+    .proxy-body.visible { grid-template-rows: 1fr; }
+    .proxy-body-inner { min-height: 0; }
+
+    .proxy-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 16px;
+      border-bottom: 1px solid #1e1e1e;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .proxy-row:last-child { border-bottom: none; }
+    .proxy-row:hover { background: rgba(124,58,237,0.1); }
+    .proxy-row.selected { background: rgba(124,58,237,0.15); }
+
+    .proxy-row-name { font-size: 14px; font-weight: 600; color: var(--text); }
+    .proxy-row-url { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: #555; margin-top: 2px; }
+    .proxy-row-info { display: flex; flex-direction: column; }
+    .proxy-check { font-size: 12px; color: var(--accent2); opacity: 0; transition: opacity 0.15s; flex-shrink: 0; }
+    .proxy-row.selected .proxy-check { opacity: 1; }
+
     /* ── Status ── */
     .status-bar {
       font-family: 'Share Tech Mono', monospace;
@@ -485,6 +546,54 @@
       <div class="controls">
         <button class="btn btn-primary" id="check-btn" onclick="startCheck()">⛏ Check</button>
         <button class="btn btn-secondary" onclick="clearAll()">Clear</button>
+        <div class="proxy-section">
+          <div class="proxy-toggle" id="proxy-toggle" onclick="toggleProxy()">
+            <div class="proxy-toggle-left">
+              <span class="proxy-toggle-label">Proxy</span>
+              <span class="proxy-active-name" id="proxy-active-name">corsproxy.io</span>
+            </div>
+            <span class="proxy-chevron" id="proxy-chevron">▼</span>
+          </div>
+          <div class="proxy-body" id="proxy-body">
+            <div class="proxy-body-inner">
+              <div class="proxy-row" onclick="selectProxy('none', 'None (Direct)')">
+                <div class="proxy-row-info">
+                  <span class="proxy-row-name">None</span>
+                  <span class="proxy-row-url">Direct — no proxy</span>
+                </div>
+                <span class="proxy-check">✓</span>
+              </div>
+              <div class="proxy-row selected" onclick="selectProxy('corsproxy', 'corsproxy.io')">
+                <div class="proxy-row-info">
+                  <span class="proxy-row-name">Cors Proxy</span>
+                  <span class="proxy-row-url">corsproxy.io</span>
+                </div>
+                <span class="proxy-check">✓</span>
+              </div>
+              <div class="proxy-row" onclick="selectProxy('allorigins', 'allorigins.win')">
+                <div class="proxy-row-info">
+                  <span class="proxy-row-name">All Origins</span>
+                  <span class="proxy-row-url">api.allorigins.win</span>
+                </div>
+                <span class="proxy-check">✓</span>
+              </div>
+              <div class="proxy-row" onclick="selectProxy('codetabs', 'codetabs.com')">
+                <div class="proxy-row-info">
+                  <span class="proxy-row-name">Code Tabs</span>
+                  <span class="proxy-row-url">api.codetabs.com</span>
+                </div>
+                <span class="proxy-check">✓</span>
+              </div>
+              <div class="proxy-row" onclick="selectProxy('thingproxy', 'thingproxy.freeboard.io')">
+                <div class="proxy-row-info">
+                  <span class="proxy-row-name">Thing Proxy</span>
+                  <span class="proxy-row-url">thingproxy.freeboard.io</span>
+                </div>
+                <span class="proxy-check">✓</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="options-row">
@@ -546,8 +655,36 @@
   let notFoundUsernames = [];
   let searchHistory = JSON.parse(localStorage.getItem('mc-search-history') || '[]');
 
-  const PROXY = 'https://corsproxy.io/?url=';
-  const PROFILE_URL = u => `${PROXY}${encodeURIComponent(`https://api.mojang.com/users/profiles/minecraft/${u}`)}`;
+  const MOJANG_URL = u => `https://api.mojang.com/users/profiles/minecraft/${u}`;
+
+  const PROXIES = {
+    none:       u => MOJANG_URL(u),
+    corsproxy:  u => `https://corsproxy.io/?url=${encodeURIComponent(MOJANG_URL(u))}`,
+    allorigins: u => `https://api.allorigins.win/raw?url=${encodeURIComponent(MOJANG_URL(u))}`,
+    codetabs:   u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(MOJANG_URL(u))}`,
+    thingproxy: u => `https://thingproxy.freeboard.io/fetch/${MOJANG_URL(u)}`,
+  };
+
+  let selectedProxy = 'corsproxy';
+  const PROFILE_URL = u => (PROXIES[selectedProxy] || PROXIES.corsproxy)(u);
+
+  function toggleProxy() {
+    const toggle = document.getElementById('proxy-toggle');
+    const body   = document.getElementById('proxy-body');
+    const isOpen = body.classList.contains('visible');
+    toggle.classList.toggle('open', !isOpen);
+    body.classList.toggle('visible', !isOpen);
+  }
+
+  function selectProxy(key, label) {
+    selectedProxy = key;
+    document.getElementById('proxy-active-name').textContent = label;
+    document.querySelectorAll('.proxy-row').forEach(r => r.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+    // close after pick
+    document.getElementById('proxy-toggle').classList.remove('open');
+    document.getElementById('proxy-body').classList.remove('visible');
+  }
 
   function setStatus(msg) {
     document.getElementById('status-bar').innerHTML = `<span>//</span> ${msg}`;
@@ -716,7 +853,12 @@
       if (res.status === 429) return { rateLimited: true };
       if (res.status === 404) return { notFound: true };
       if (!res.ok) return { ok: false, reason: `HTTP ${res.status}` };
-      const data = await res.json();
+      let data = await res.json();
+      // allorigins wraps the response in { contents: "..." }
+      if (selectedProxy === 'allorigins' && data.contents) {
+        try { data = JSON.parse(data.contents); } catch { return { ok: false, reason: 'Parse Error' }; }
+      }
+      if (!data.id) return { notFound: true };
       return { ok: true, name: data.name, id: data.id };
     } catch {
       return { ok: false, reason: 'Network Error' };
