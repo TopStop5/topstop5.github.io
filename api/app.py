@@ -7,7 +7,6 @@ import time
 import random
 import asyncio
 import tempfile
-import textwrap
 import zipfile
 from urllib.parse import urlparse
 
@@ -27,10 +26,12 @@ def add_cors(response):
 
 
 # ── Site Config Registry ───────────────────────────────────────────────────────
+# To add a new site, add one entry here. No other code changes needed.
 #
 # Keys:
 #   content_sel   : CSS selector for the chapter text container
 #   title_sel     : CSS selector for the chapter title (optional)
+#   cover_sel     : CSS selector for the cover image on the novel index page (optional)
 #   url_pattern   : chapter URL template — use {base} and {num}
 #   remove_sels   : list of CSS selectors to strip before extracting text
 #   stop_phrases  : list of strings — stop collecting paragraphs when seen
@@ -107,7 +108,7 @@ def get_novel_title_from_url(url: str) -> str:
     return "Novel"
 
 
-# ── Cover Fetcher ─────────────────────────────────────────────────────────────
+# ── Cover Fetcher ──────────────────────────────────────────────────────────────
 
 def fetch_cover_image(base_url: str, config: dict):
     """
@@ -379,7 +380,12 @@ def scrape_with_selenium(
 
 # ── Output Builders ────────────────────────────────────────────────────────────
 
-def build_epub(chapters_dict: dict, novel_title: str, cover_image: bytes = None, cover_media_type: str = "image/jpeg") -> bytes:
+def build_epub(
+    chapters_dict: dict,
+    novel_title: str,
+    cover_image: bytes = None,
+    cover_media_type: str = "image/jpeg",
+) -> bytes:
     def safe(name):
         return re.sub(r'[\\/*?:"<>|]', "-", name).strip()
 
@@ -518,7 +524,7 @@ def scrape_stream():
     def generate():
         import threading, base64
 
-        events       = []
+        events        = []
         scrape_result = {}
         scrape_error  = {}
 
@@ -580,16 +586,19 @@ def scrape_stream():
 
         safe_title = re.sub(r'[\\/*?:"<>|]', "-", novel_title).strip() or "Novel"
 
-        # Fetch cover for epub
+        # Fetch cover for epub (gracefully skipped on failure)
         cover_image, cover_media_type = None, "image/jpeg"
         if fmt == "epub":
             cover_image, cover_media_type = fetch_cover_image(base_url, config)
 
         try:
             if fmt == "epub":
-                file_bytes = build_epub(chapters, novel_title, cover_image, cover_media_type or "image/jpeg")
-                filename   = f"{safe_title}.epub"
-                mimetype   = "application/epub+zip"
+                file_bytes = build_epub(
+                    chapters, novel_title,
+                    cover_image, cover_media_type or "image/jpeg",
+                )
+                filename = f"{safe_title}.epub"
+                mimetype = "application/epub+zip"
             else:
                 file_bytes = build_zip(chapters)
                 filename   = f"{safe_title}.zip"
@@ -653,7 +662,10 @@ def scrape():
 
     if fmt == "epub":
         cover_image, cover_media_type = fetch_cover_image(base_url, config)
-        buf = io.BytesIO(build_epub(chapters, novel_title, cover_image, cover_media_type or "image/jpeg"))
+        buf = io.BytesIO(build_epub(
+            chapters, novel_title,
+            cover_image, cover_media_type or "image/jpeg",
+        ))
         return send_file(buf, mimetype="application/epub+zip",
                          as_attachment=True, download_name=f"{safe_title}.epub")
 
