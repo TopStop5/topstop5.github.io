@@ -371,7 +371,7 @@ def build_epub(chapters_dict: dict, novel_title: str) -> bytes:
             file_name=f"chapter_{str(num).zfill(zero_pad)}.xhtml",
             lang="en",
         )
-        ch.content = html_doc
+        ch.content = html_doc.encode("utf-8")
         book.add_item(ch)
         epub_chapters.append(ch)
 

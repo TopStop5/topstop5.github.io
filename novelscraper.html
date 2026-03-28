@@ -382,9 +382,13 @@
       addLog(`Scraping "${data.title || 'novel'}" — ${total} chapters…`, 'info');
 
     } else if (type === 'progress') {
-      setProgress((data.done / data.total) * 100);
-      addLog(data.ok ? `✓ Chapter ${data.ch}` : `✗ Chapter ${data.ch} failed`,
-             data.ok ? 'ok' : 'err');
+      if (data.ch !== undefined) {
+        setProgress((data.done / data.total) * 100);
+        addLog(data.ok ? `✓ Chapter ${data.ch}` : `✗ Chapter ${data.ch} failed`,
+               data.ok ? 'ok' : 'err');
+      } else if (data.message) {
+        addLog(data.message, 'info');
+      }
 
     } else if (type === 'done') {
       setProgress(100);
