@@ -64,6 +64,10 @@ SITE_CONFIG = {
         "stop_phrases": [],
         "sentinel":     None,
         "needs_js":     False,
+        # next_data_content_key: the __NEXT_DATA__ pageProps key that holds chapter HTML.
+        # Set to None for auto-probe (tries common keys; logs found key on first success).
+        "next_data_content_key": None,
+        "next_data_probe": True,   # auto-probe __NEXT_DATA__ even without a known key
         "client_fetch": True,   # Railway blocks outbound to Fastly CDN — browser fetches
                                 # each chapter URL and POSTs the HTML to /parse instead
         "hr_separator": True,   # split TL credit from chapter at <div data-type="horizontalRule">
@@ -197,31 +201,65 @@ def extract_chapter_text(html_text: str, config: dict, ch_num: int) -> str:
     # Sites like WeTriedTLS render content via React client-side. The raw HTTP
     # response is a JS shell, but the chapter HTML is serialised inside
     # <script id="__NEXT_DATA__">. We extract it directly — no Selenium needed.
-    next_data_key = config.get("next_data_content_key")
-    if next_data_key:
+    next_data_key   = config.get("next_data_content_key")
+    next_data_probe = config.get("next_data_probe", False)
+
+    # Common keys used by Next.js novel sites to store chapter HTML/text
+    _PROBE_KEYS = [
+        "content", "chapterContent", "chapter_content", "body", "text",
+        "chapterBody", "novelContent", "html", "chapterHtml", "chapterText",
+        "data", "chapter", "chapterData",
+    ]
+
+    def _all_keys(obj, prefix=""):
+        keys = []
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                full = f"{prefix}.{k}" if prefix else k
+                keys.append(full)
+                keys.extend(_all_keys(v, full))
+        elif isinstance(obj, list) and obj:
+            keys.extend(_all_keys(obj[0], f"{prefix}[]"))
+        return keys
+
+    if next_data_key or next_data_probe:
         next_script = soup.find("script", id="__NEXT_DATA__")
         if next_script:
             try:
                 page_data  = json.loads(next_script.string)
                 page_props = page_data.get("props", {}).get("pageProps", {})
-                raw        = _find_key_recursive(page_props, next_data_key)
 
-                if raw and isinstance(raw, str) and len(raw) > 50:
+                raw = None
+                found_key = None
+
+                # Try the configured key first
+                if next_data_key:
+                    raw = _find_key_recursive(page_props, next_data_key)
+                    if raw and isinstance(raw, str) and len(raw) > 50:
+                        found_key = next_data_key
+                    else:
+                        raw = None
+
+                # Auto-probe if no configured key matched
+                if raw is None and next_data_probe:
+                    for probe_key in _PROBE_KEYS:
+                        candidate = _find_key_recursive(page_props, probe_key)
+                        if candidate and isinstance(candidate, str) and len(candidate) > 50:
+                            raw = candidate
+                            found_key = probe_key
+                            print(f"CH{ch_num}: __NEXT_DATA__ auto-probe found key='{probe_key}' "
+                                  f"({len(raw)} chars) — set next_data_content_key='{probe_key}' "
+                                  f"in SITE_CONFIG to skip probing next time")
+                            break
+                    if raw is None:
+                        all_k = _all_keys(page_props)
+                        print(f"CH{ch_num}: __NEXT_DATA__ probe failed. "
+                              f"All pageProps keys: {all_k[:40]}")
+
+                if raw and found_key:
                     soup = BeautifulSoup(f'<div id="nd-root">{raw}</div>', "html.parser")
-                    print(f"CH{ch_num}: __NEXT_DATA__ OK ({len(raw)} chars)")
-                else:
-                    def _all_keys(obj, prefix=""):
-                        keys = []
-                        if isinstance(obj, dict):
-                            for k, v in obj.items():
-                                full = f"{prefix}.{k}" if prefix else k
-                                keys.append(full)
-                                keys.extend(_all_keys(v, full))
-                        elif isinstance(obj, list) and obj:
-                            keys.extend(_all_keys(obj[0], f"{prefix}[]"))
-                        return keys
-                    print(f"CH{ch_num}: __NEXT_DATA__ key '{next_data_key}' not found. "
-                          f"pageProps keys: {_all_keys(page_props)[:20]}")
+                    print(f"CH{ch_num}: __NEXT_DATA__ OK key='{found_key}' ({len(raw)} chars)")
+
             except Exception as e:
                 print(f"CH{ch_num}: __NEXT_DATA__ parse error: {e}")
         else:
@@ -231,7 +269,7 @@ def extract_chapter_text(html_text: str, config: dict, ch_num: int) -> str:
     container = soup.select_one(config["content_sel"])
     # For __NEXT_DATA__ sites the original content_sel won't exist in the
     # re-parsed soup — fall back to the injected root div
-    if not container and next_data_key:
+    if not container and (next_data_key or next_data_probe):
         container = soup.select_one("#nd-root")
     if not container:
         raise Exception(
