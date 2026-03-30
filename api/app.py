@@ -498,7 +498,6 @@ async def scrape_all_chapters(
                 try:
                     text = await retry_tasks[ch_num]
                     chapters[ch_num] = text
-                    done_count += 1
                     if progress_cb:
                         progress_cb(done_count, total, ch_num, True)
                 except ChapterNotFound:
