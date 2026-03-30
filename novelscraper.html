@@ -306,7 +306,7 @@
     if (!url)   { alert('Please enter a novel URL.');         return; }
     if (isNaN(start) || isNaN(end) || start < 1 || end < start)
       { alert('Please enter a valid chapter range.'); return; }
-    if (end - start > 99) { alert('Maximum 100 chapters per request.'); return; }
+    if (end - start > 10000) { alert('Maximum 10,000 chapters per request.'); return; }
 
     document.getElementById('scrape-btn').disabled = true;
     resetProgress();
