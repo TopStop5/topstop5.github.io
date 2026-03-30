@@ -63,7 +63,7 @@ SITE_CONFIG = {
         "remove_sels":  [],
         "stop_phrases": [],
         "sentinel":     None,
-        "needs_js":     True,   # Next.js/React — Selenium waits for #reader-container to render
+        "needs_js":     True,   # Next.js/React - Selenium waits for #reader-container to render
         "hr_separator": True,   # split TL credit from chapter at <div data-type="horizontalRule">
     },
     "webnoveltranslations.net": {
