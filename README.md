@@ -1,6 +1,6 @@
 # TopStop5
 
-A personal corner of the internet. Dark, fast, a little obsessive about purple. Tools I built because I wanted them to exist.
+My own little corner of the internet. Tools I built for my convenience and yours too I guess
 
 🔗 **[topstop5.github.io](https://topstop5.github.io)**
 
