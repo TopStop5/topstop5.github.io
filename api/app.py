@@ -41,6 +41,8 @@ SITE_CONFIG = {
         ],
         "sentinel":     "Some novel pages moved for better user experience",
         "needs_js":     False,
+        "client_fetch": True,   # Railway datacenter IP blocked by Cloudflare (403)
+                                # — browser fetches pages, server only parses HTML
         "impersonate":  "chrome131",
         "max_concurrent": 1,    # sequential — novelfire 429s under concurrent load
         "request_delay":  1.5,  # 1.5s between requests to stay under rate limit
@@ -434,58 +436,35 @@ async def scrape_all_chapters(
     progress_cb=None,
 ) -> tuple:
     """
-    Fetch chapters concurrently (or sequentially when max_concurrent=1).
+    Fetch chapters concurrently.
     progress_cb(done, total, ch_num, ok, end_of_novel=None) called per chapter.
     Returns (chapters_dict, failed_list).
-
-    When max_concurrent == 1 (e.g. novelfire.net) tasks are created one at a
-    time so no requests are pre-spawned before the previous one finishes.
-    This prevents the burst of concurrent requests that triggers 429s.
     """
-    max_conc    = config.get("max_concurrent", MAX_CONCURRENT)
-    sem         = asyncio.Semaphore(max_conc)
-    chapters    = {}
-    failed      = []
-    total       = end - start + 1
+    sem = asyncio.Semaphore(config.get("max_concurrent", MAX_CONCURRENT))
+    chapters = {}
+    failed = []
+    total = end - start + 1
     url_pattern = config["url_pattern"]
-    loop        = asyncio.get_event_loop()
-    sequential  = (max_conc == 1)
+    loop = asyncio.get_event_loop()
 
-    # For concurrent sites, pre-create all tasks so they run in parallel.
-    # For sequential sites (max_concurrent=1), we create and await tasks one
-    # at a time to avoid firing all requests before the semaphore can throttle.
-    if not sequential:
-        tasks = {
-            ch_num: asyncio.create_task(
-                fetch_chapter(
-                    loop, sem,
-                    url_pattern.format(base=base_url, num=ch_num),
-                    config, ch_num,
-                )
+    tasks = {
+        ch_num: asyncio.create_task(
+            fetch_chapter(
+                loop, sem,
+                url_pattern.format(base=base_url, num=ch_num),
+                config, ch_num
             )
-            for ch_num in range(start, end + 1)
-        }
-    else:
-        tasks = {}  # will be populated lazily below
+        )
+        for ch_num in range(start, end + 1)
+    }
 
-    done_count  = 0
+    done_count = 0
     novel_ended = False
 
     for ch_num in range(start, end + 1):
         if novel_ended:
-            if ch_num in tasks:
-                tasks[ch_num].cancel()
+            tasks[ch_num].cancel()
             continue
-
-        # Lazy task creation for sequential mode
-        if sequential and ch_num not in tasks:
-            tasks[ch_num] = asyncio.create_task(
-                fetch_chapter(
-                    loop, sem,
-                    url_pattern.format(base=base_url, num=ch_num),
-                    config, ch_num,
-                )
-            )
 
         try:
             text = await tasks[ch_num]
@@ -738,6 +717,12 @@ def scrape_stream():
     config = SITE_CONFIG.get(domain)
     if not config:
         return jsonify({"error": f"Unsupported site: {domain}"}), 400
+
+    if config.get("client_fetch"):
+        return jsonify({"error": (
+            f"{domain} blocks server-side requests (Cloudflare 403). "
+            "Use the /scrape-client-stream endpoint — the browser must fetch pages for this site."
+        )}), 400
 
     base_url    = get_base_url(url)
     novel_title = get_novel_title_from_url(url)
