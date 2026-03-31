@@ -434,35 +434,58 @@ async def scrape_all_chapters(
     progress_cb=None,
 ) -> tuple:
     """
-    Fetch chapters concurrently.
+    Fetch chapters concurrently (or sequentially when max_concurrent=1).
     progress_cb(done, total, ch_num, ok, end_of_novel=None) called per chapter.
     Returns (chapters_dict, failed_list).
+
+    When max_concurrent == 1 (e.g. novelfire.net) tasks are created one at a
+    time so no requests are pre-spawned before the previous one finishes.
+    This prevents the burst of concurrent requests that triggers 429s.
     """
-    sem = asyncio.Semaphore(config.get("max_concurrent", MAX_CONCURRENT))
-    chapters = {}
-    failed = []
-    total = end - start + 1
+    max_conc    = config.get("max_concurrent", MAX_CONCURRENT)
+    sem         = asyncio.Semaphore(max_conc)
+    chapters    = {}
+    failed      = []
+    total       = end - start + 1
     url_pattern = config["url_pattern"]
-    loop = asyncio.get_event_loop()
+    loop        = asyncio.get_event_loop()
+    sequential  = (max_conc == 1)
 
-    tasks = {
-        ch_num: asyncio.create_task(
-            fetch_chapter(
-                loop, sem,
-                url_pattern.format(base=base_url, num=ch_num),
-                config, ch_num
+    # For concurrent sites, pre-create all tasks so they run in parallel.
+    # For sequential sites (max_concurrent=1), we create and await tasks one
+    # at a time to avoid firing all requests before the semaphore can throttle.
+    if not sequential:
+        tasks = {
+            ch_num: asyncio.create_task(
+                fetch_chapter(
+                    loop, sem,
+                    url_pattern.format(base=base_url, num=ch_num),
+                    config, ch_num,
+                )
             )
-        )
-        for ch_num in range(start, end + 1)
-    }
+            for ch_num in range(start, end + 1)
+        }
+    else:
+        tasks = {}  # will be populated lazily below
 
-    done_count = 0
+    done_count  = 0
     novel_ended = False
 
     for ch_num in range(start, end + 1):
         if novel_ended:
-            tasks[ch_num].cancel()
+            if ch_num in tasks:
+                tasks[ch_num].cancel()
             continue
+
+        # Lazy task creation for sequential mode
+        if sequential and ch_num not in tasks:
+            tasks[ch_num] = asyncio.create_task(
+                fetch_chapter(
+                    loop, sem,
+                    url_pattern.format(base=base_url, num=ch_num),
+                    config, ch_num,
+                )
+            )
 
         try:
             text = await tasks[ch_num]
