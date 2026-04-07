@@ -81,7 +81,7 @@ SITE_CONFIG = {
 MAX_CONCURRENT = 3
 RETRY_ATTEMPTS = 3
 RETRY_DELAY    = 2.0
-REQUEST_DELAY  = 1.5
+REQUEST_DELAY  = 0.5
 DEFAULT_IMPERSONATE = "chrome124"
 
 
@@ -546,7 +546,15 @@ def scrape_with_selenium(
             chapter_url = url_pattern.format(base=base_url, num=ch_num)
             try:
                 driver.get(chapter_url)
-                WebDriverWait(driver, 15).until(
+                import time as _time
+                deadline = _time.time() + 20
+                while _time.time() < deadline:
+                    title = driver.title
+                    if "Just a moment" not in title and "Attention Required" not in title:
+                        break
+                    _time.sleep(1)
+                
+                WebDriverWait(driver, 10).until(
                     EC.presence_of_element_located(
                         ("css selector", config["content_sel"])
                     )
