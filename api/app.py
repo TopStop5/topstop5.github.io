@@ -40,9 +40,13 @@ SITE_CONFIG = {
             "Tap the middle of the screen",
         ],
         "sentinel":     "Some novel pages moved for better user experience",
-        "needs_js":     False,
-        "impersonate":  "chrome131",   # chrome124 now 403s; try latest fingerprint
-        "extra_headers": {            # extra headers help pass CF bot checks
+
+        # important:
+        "needs_js":     False,          # parser does NOT need JS
+        "client_fetch": True,           # retrieval should happen in browser, not Railway
+
+        "impersonate":  "chrome131",
+        "extra_headers": {
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.9",
             "Accept-Encoding": "gzip, deflate, br",
@@ -55,6 +59,7 @@ SITE_CONFIG = {
             "Upgrade-Insecure-Requests": "1",
         },
     },
+
     "wetriedtls.com": {
         "content_sel":  "#reader-container",
         "title_sel":    None,
@@ -63,9 +68,11 @@ SITE_CONFIG = {
         "remove_sels":  [],
         "stop_phrases": [],
         "sentinel":     None,
-        "needs_js":     True,   # Next.js/React - Selenium waits for #reader-container to render
-        "hr_separator": True,   # split TL credit from chapter at <div data-type="horizontalRule">
+        "needs_js":     True,
+        "client_fetch": True,           # optional but explicit
+        "hr_separator": True,
     },
+
     "webnoveltranslations.net": {
         "content_sel":  "#novel-chapter-container",
         "title_sel":    "h1",
@@ -75,6 +82,7 @@ SITE_CONFIG = {
         "stop_phrases": [],
         "sentinel":     None,
         "needs_js":     False,
+        "client_fetch": False,
     },
 }
 
