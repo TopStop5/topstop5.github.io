@@ -1039,7 +1039,7 @@ def selenium_smoke_test():
         from selenium.webdriver.chrome.service import Service
         from selenium.webdriver.chrome.options import Options
         opts = Options()
-        for arg in ["--headless=new", "--no-sandbox", "--disable-dev-shm-usage",
+        for arg in ["--no-sandbox", "--disable-dev-shm-usage",
                     "--disable-gpu", "--disable-extensions", "--log-level=3"]:
             opts.add_argument(arg)
         opts.binary_location = os.environ.get("CHROME_BIN", "/usr/bin/chromium")
