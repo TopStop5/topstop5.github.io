@@ -40,10 +40,8 @@ SITE_CONFIG = {
             "Tap the middle of the screen",
         ],
         "sentinel":     "Some novel pages moved for better user experience",
-
-        # important:
-        "needs_js":     False,          # parser does NOT need JS
-        "client_fetch": True,           # retrieval should happen in browser, not Railway
+        "needs_js":     True,
+        "client_fetch": True, 
 
         "impersonate":  "chrome131",
         "extra_headers": {
@@ -524,49 +522,87 @@ async def scrape_all_chapters(
 def scrape_with_selenium(
     base_url: str, start: int, end: int, config: dict, progress_cb=None
 ):
-    """Only used when config['needs_js'] is True."""
     from selenium import webdriver
     from selenium.webdriver.chrome.service import Service
     from selenium.webdriver.chrome.options import Options
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.common.by import By
 
     opts = Options()
     for arg in [
-        "--headless=new", "--no-sandbox", "--disable-dev-shm-usage",
-        "--disable-gpu", "--disable-extensions",
-        "--blink-settings=imagesEnabled=false", "--log-level=3",
+        "--headless=new",
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--disable-extensions",
+        "--blink-settings=imagesEnabled=false",
+        "--log-level=3",
         "--window-size=1280,800",
     ]:
         opts.add_argument(arg)
+
+    # Helps a bit with bot detection
+    opts.add_argument("--disable-blink-features=AutomationControlled")
+    opts.add_experimental_option("excludeSwitches", ["enable-automation"])
+    opts.add_experimental_option("useAutomationExtension", False)
+
     opts.binary_location = os.environ.get("CHROME_BIN", "/usr/bin/chromium")
     service = Service(
         executable_path=os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver"),
         log_path=os.devnull,
     )
+
     driver = webdriver.Chrome(service=service, options=opts)
+    driver.execute_cdp_cmd(
+        "Page.addScriptToEvaluateOnNewDocument",
+        {
+            "source": """
+                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+            """
+        },
+    )
 
     chapters, failed = {}, []
     total = end - start + 1
     url_pattern = config["url_pattern"]
 
+    def wait_for_real_page(chapter_url: str):
+        driver.get(chapter_url)
+
+        # First: wait for document ready
+        WebDriverWait(driver, 20).until(
+            lambda d: d.execute_script("return document.readyState") == "complete"
+        )
+
+        # Then: give Cloudflare / interstitial pages time to clear
+        WebDriverWait(driver, 25).until(
+            lambda d: (
+                config["content_sel"] in d.page_source
+                or d.find_elements(By.CSS_SELECTOR, config["content_sel"])
+            )
+        )
+
+        # Final strong wait for actual chapter node
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, config["content_sel"]))
+        )
+
     try:
         for i, ch_num in enumerate(range(start, end + 1), 1):
             chapter_url = url_pattern.format(base=base_url, num=ch_num)
+
             try:
-                driver.get(chapter_url)
-                WebDriverWait(driver, 15).until(
-                    EC.presence_of_element_located(
-                        ("css selector", config["content_sel"])
-                    )
-                )
+                wait_for_real_page(chapter_url)
                 text = extract_chapter_text(driver.page_source, config, ch_num)
                 chapters[ch_num] = text
                 ok = True
+
             except ChapterNotFound:
                 if progress_cb:
                     progress_cb(i, total, ch_num, False, end_of_novel=ch_num)
                 break
+
             except Exception as e:
                 import traceback
                 print(f"CH{ch_num} SELENIUM ERROR: {e}")
@@ -576,7 +612,9 @@ def scrape_with_selenium(
 
             if progress_cb:
                 progress_cb(i, total, ch_num, ok)
-            time.sleep(random.uniform(0.4, 0.9))
+
+            time.sleep(random.uniform(0.6, 1.2))
+
     finally:
         driver.quit()
 
