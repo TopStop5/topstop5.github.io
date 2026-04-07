@@ -40,7 +40,7 @@ SITE_CONFIG = {
             "Tap the middle of the screen",
         ],
         "sentinel":     "Some novel pages moved for better user experience",
-        "needs_js":     False,
+        "needs_js":     True,
         "impersonate":  "chrome124",   # chrome124 now 403s; try latest fingerprint
         "extra_headers": {            # extra headers help pass CF bot checks
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
