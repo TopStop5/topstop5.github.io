@@ -41,7 +41,7 @@ SITE_CONFIG = {
         ],
         "sentinel":     "Some novel pages moved for better user experience",
         "needs_js":     False,
-        "impersonate":  "chrome131",   # chrome124 now 403s; try latest fingerprint
+        "impersonate":  "chrome124",   # chrome124 now 403s; try latest fingerprint
         "extra_headers": {            # extra headers help pass CF bot checks
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.9",
@@ -81,7 +81,7 @@ SITE_CONFIG = {
 MAX_CONCURRENT = 3
 RETRY_ATTEMPTS = 3
 RETRY_DELAY    = 2.0
-REQUEST_DELAY  = 0.5
+REQUEST_DELAY  = time.sleep(random.uniform(1.5, 3.5))
 DEFAULT_IMPERSONATE = "chrome124"
 
 
