@@ -41,8 +41,8 @@ SITE_CONFIG = {
         ],
         "sentinel":     "Some novel pages moved for better user experience",
         "needs_js":     True,
-        "impersonate":  "chrome124",   # chrome124 now 403s; try latest fingerprint
-        "extra_headers": {            # extra headers help pass CF bot checks
+        "impersonate":  "chrome124",
+        "extra_headers": {
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.9",
             "Accept-Encoding": "gzip, deflate, br",
@@ -63,8 +63,8 @@ SITE_CONFIG = {
         "remove_sels":  [],
         "stop_phrases": [],
         "sentinel":     None,
-        "needs_js":     True,   # Next.js/React - Selenium waits for #reader-container to render
-        "hr_separator": True,   # split TL credit from chapter at <div data-type="horizontalRule">
+        "needs_js":     True,
+        "hr_separator": True,
     },
     "webnoveltranslations.net": {
         "content_sel":  "#novel-chapter-container",
@@ -84,27 +84,19 @@ RETRY_DELAY    = 2.0
 REQUEST_DELAY  = 0.5
 DEFAULT_IMPERSONATE = "chrome124"
 
-
-# ── Custom Exceptions ──────────────────────────────────────────────────────────
-
 class ChapterNotFound(Exception):
     """Chapter does not exist on the site."""
 
 class UnsupportedSite(Exception):
     pass
 
-
-# ── URL Helpers ────────────────────────────────────────────────────────────────
-
 def get_domain(url: str) -> str:
     return urlparse(url).netloc.replace("www.", "")
 
 def get_base_url(url: str) -> str:
-    """Strip any trailing /chapter-N so we have the clean novel base URL."""
     return re.sub(r"/chapter-\d+/?$", "", url.rstrip("/"))
 
 def get_novel_title_from_url(url: str) -> str:
-    """Best-effort title from the URL slug."""
     parts = urlparse(url).path.strip("/").split("/")
     for part in reversed(parts):
         if part and not part.startswith("chapter"):
@@ -112,13 +104,7 @@ def get_novel_title_from_url(url: str) -> str:
     return "Novel"
 
 
-# ── Cover Fetcher ──────────────────────────────────────────────────────────────
-
 def fetch_cover_image(base_url: str, config: dict):
-    """
-    Fetch the novel cover image bytes + media type from the novel index page.
-    Returns (image_bytes, media_type) or (None, None) if unavailable.
-    """
     cover_sel = config.get("cover_sel")
     if not cover_sel:
         return None, None
@@ -134,7 +120,6 @@ def fetch_cover_image(base_url: str, config: dict):
             print(f"Cover selector '{cover_sel}' not found at {base_url}")
             return None, None
 
-        # WeTriedTLS uses Next.js /_next/image?url=<encoded_real_url> — decode it
         img_url = img.get("src", "")
         if "/_next/image" in img_url and "url=" in img_url:
             from urllib.parse import parse_qs, urlparse as _up, unquote
@@ -163,11 +148,7 @@ def fetch_cover_image(base_url: str, config: dict):
         print(f"Cover fetch failed: {e}")
         return None, None
 
-
-# ── Text Extraction ────────────────────────────────────────────────────────────
-
 def _find_key_recursive(obj, key):
-    """Depth-first search for a key in a nested dict/list structure."""
     if isinstance(obj, dict):
         if key in obj:
             return obj[key]
@@ -184,21 +165,14 @@ def _find_key_recursive(obj, key):
 
 
 def extract_chapter_text(html_text: str, config: dict, ch_num: int) -> str:
-    """Parse HTML and return clean chapter text, double-spaced between paragraphs."""
     soup = BeautifulSoup(html_text, "html.parser")
 
-    # Sentinel check
     if config.get("sentinel") and config["sentinel"] in soup.get_text():
         raise ChapterNotFound(f"Chapter {ch_num} does not exist")
 
-    # ── Next.js __NEXT_DATA__ extraction ──────────────────────────────────────
-    # Sites like WeTriedTLS render content via React client-side. The raw HTTP
-    # response is a JS shell, but the chapter HTML is serialised inside
-    # <script id="__NEXT_DATA__">. We extract it directly — no Selenium needed.
     next_data_key   = config.get("next_data_content_key")
     next_data_probe = config.get("next_data_probe", False)
 
-    # Common keys used by Next.js novel sites to store chapter HTML/text
     _PROBE_KEYS = [
         "content", "chapterContent", "chapter_content", "body", "text",
         "chapterBody", "novelContent", "html", "chapterHtml", "chapterText",
@@ -226,7 +200,6 @@ def extract_chapter_text(html_text: str, config: dict, ch_num: int) -> str:
                 raw = None
                 found_key = None
 
-                # Try the configured key first
                 if next_data_key:
                     raw = _find_key_recursive(page_props, next_data_key)
                     if raw and isinstance(raw, str) and len(raw) > 50:
@@ -234,7 +207,6 @@ def extract_chapter_text(html_text: str, config: dict, ch_num: int) -> str:
                     else:
                         raw = None
 
-                # Auto-probe if no configured key matched
                 if raw is None and next_data_probe:
                     for probe_key in _PROBE_KEYS:
                         candidate = _find_key_recursive(page_props, probe_key)
@@ -242,13 +214,11 @@ def extract_chapter_text(html_text: str, config: dict, ch_num: int) -> str:
                             raw = candidate
                             found_key = probe_key
                             print(f"CH{ch_num}: __NEXT_DATA__ auto-probe found key='{probe_key}' "
-                                  f"({len(raw)} chars) — set next_data_content_key='{probe_key}' "
-                                  f"in SITE_CONFIG to skip probing next time")
+                                  f"({len(raw)} chars)")
                             break
                     if raw is None:
                         all_k = _all_keys(page_props)
-                        print(f"CH{ch_num}: __NEXT_DATA__ probe failed. "
-                              f"All pageProps keys: {all_k[:40]}")
+                        print(f"CH{ch_num}: __NEXT_DATA__ probe failed. Keys: {all_k[:40]}")
 
                 if raw and found_key:
                     soup = BeautifulSoup(f'<div id="nd-root">{raw}</div>', "html.parser")
@@ -259,10 +229,7 @@ def extract_chapter_text(html_text: str, config: dict, ch_num: int) -> str:
         else:
             print(f"CH{ch_num}: no __NEXT_DATA__ script tag found")
 
-    # Find content container
     container = soup.select_one(config["content_sel"])
-    # For __NEXT_DATA__ sites the original content_sel won't exist in the
-    # re-parsed soup — fall back to the injected root div
     if not container and (next_data_key or next_data_probe):
         container = soup.select_one("#nd-root")
     if not container:
@@ -270,12 +237,10 @@ def extract_chapter_text(html_text: str, config: dict, ch_num: int) -> str:
             f"Content container '{config['content_sel']}' not found for chapter {ch_num}"
         )
 
-    # Remove ad / junk nodes
     for sel in config.get("remove_sels", []):
         for el in container.select(sel):
             el.decompose()
 
-    # Extract title
     title_text = ""
     if config.get("title_sel"):
         title_el = soup.select_one(config["title_sel"])
@@ -284,9 +249,6 @@ def extract_chapter_text(html_text: str, config: dict, ch_num: int) -> str:
 
     stop_phrases = config.get("stop_phrases", [])
 
-    # ── WeTriedTLS special handling ────────────────────────────────────────────
-    # The site wraps the TL's intro/credit block before a <div data-type="horizontalRule">,
-    # and the actual chapter text comes after it. We skip everything before the first HR.
     if config.get("hr_separator"):
         from bs4 import Tag, NavigableString
         hr_divs = container.find_all("div", attrs={"data-type": "horizontalRule"})
@@ -333,10 +295,8 @@ def extract_chapter_text(html_text: str, config: dict, ch_num: int) -> str:
                 raise Exception(f"No text extracted for chapter {ch_num}")
             return "\n\n".join(lines)
 
-        # No HR found — fall through to generic extraction below
         print(f"WeTriedTLS CH{ch_num}: no horizontalRule div found, using generic extraction")
 
-    # ── Generic extraction ─────────────────────────────────────────────────────
     lines = []
     if title_text:
         lines.append(title_text)
@@ -365,14 +325,8 @@ def extract_chapter_text(html_text: str, config: dict, ch_num: int) -> str:
     return "\n\n".join(lines)
 
 
-# ── Sync Fetcher ───────────────────────────────────────────────────────────────
-
 def fetch_chapter_sync(chapter_url: str, config: dict, ch_num: int) -> str:
-    """
-    Sync fetch using curl_cffi to impersonate a real Chrome TLS fingerprint,
-    bypassing Cloudflare Turnstile / Bot Management.
-    """
-    impersonate  = config.get("impersonate", DEFAULT_IMPERSONATE)
+    impersonate   = config.get("impersonate", DEFAULT_IMPERSONATE)
     extra_headers = config.get("extra_headers", {})
     last_exc = None
     for attempt in range(RETRY_ATTEMPTS):
@@ -393,7 +347,7 @@ def fetch_chapter_sync(chapter_url: str, config: dict, ch_num: int) -> str:
             return extract_chapter_text(r.text, config, ch_num)
 
         except ChapterNotFound:
-            raise  # never retry a missing chapter
+            raise
 
         except Exception as e:
             last_exc = e
@@ -410,7 +364,6 @@ async def fetch_chapter(
     config: dict,
     ch_num: int,
 ) -> str:
-    """Async wrapper — runs curl_cffi in a thread executor so it doesn't block the event loop."""
     async with sem:
         return await loop.run_in_executor(
             None, fetch_chapter_sync, chapter_url, config, ch_num
@@ -424,11 +377,6 @@ async def scrape_all_chapters(
     config: dict,
     progress_cb=None,
 ) -> tuple:
-    """
-    Fetch chapters concurrently.
-    progress_cb(done, total, ch_num, ok, end_of_novel=None) called per chapter.
-    Returns (chapters_dict, failed_list).
-    """
     sem = asyncio.Semaphore(MAX_CONCURRENT)
     chapters = {}
     failed = []
@@ -477,7 +425,6 @@ async def scrape_all_chapters(
         if progress_cb:
             progress_cb(done_count, total, ch_num, ok)
 
-        # ── Retry failed chapters (up to 2 more attempts) ─────────────────────────
     if failed:
         for retry_round in range(1, 3):
             if not failed:
@@ -509,34 +456,87 @@ async def scrape_all_chapters(
 
     return chapters, failed
 
-
-# ── Selenium Fallback ──────────────────────────────────────────────────────────
-
-def scrape_with_selenium(
-    base_url: str, start: int, end: int, config: dict, progress_cb=None
-):
-    """Only used when config['needs_js'] is True."""
+def make_selenium_driver():
+    """
+    Build a stealth headless Chrome driver.
+    Key flags prevent CF from fingerprinting headless Chromium:
+      - excludeSwitches removes 'enable-automation'
+      - useAutomationExtension False disables CDP automation banner
+      - --disable-blink-features=AutomationControlled removes navigator.webdriver
+    """
     from selenium import webdriver
     from selenium.webdriver.chrome.service import Service
     from selenium.webdriver.chrome.options import Options
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
 
     opts = Options()
     for arg in [
-        "--headless=new", "--no-sandbox", "--disable-dev-shm-usage",
-        "--disable-gpu", "--disable-extensions",
-        "--blink-settings=imagesEnabled=false", "--log-level=3",
+        "--headless=new",
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--disable-extensions",
+        "--blink-settings=imagesEnabled=false",
+        "--log-level=3",
         "--window-size=1280,800",
+        "--disable-blink-features=AutomationControlled",
+        (
+            "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
     ]:
         opts.add_argument(arg)
+
+    opts.add_experimental_option("excludeSwitches", ["enable-automation"])
+    opts.add_experimental_option("useAutomationExtension", False)
     opts.binary_location = os.environ.get("CHROME_BIN", "/usr/bin/chromium")
+
     service = Service(
         executable_path=os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver"),
         log_path=os.devnull,
     )
     driver = webdriver.Chrome(service=service, options=opts)
 
+    driver.execute_cdp_cmd(
+        "Page.addScriptToEvaluateOnNewDocument",
+        {"source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"},
+    )
+    return driver
+
+
+def wait_for_cf_and_content(driver, content_sel: str, cf_timeout: int = 20, content_timeout: int = 15):
+    """
+    1. Wait up to cf_timeout seconds for the CF 'Just a moment' title to disappear.
+    2. Then wait up to content_timeout seconds for content_sel to appear in the DOM.
+    Raises TimeoutException if content never appears.
+    """
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+
+    # Phase 1: wait for CF interstitial to clear
+    deadline = time.time() + cf_timeout
+    while time.time() < deadline:
+        title = driver.title
+        print(f"  page title: {title!r}")
+        if "Just a moment" not in title and "Attention Required" not in title:
+            break
+        time.sleep(1)
+    else:
+        print("  CF challenge did not clear within timeout")
+
+    # Phase 2: wait for actual content
+    WebDriverWait(driver, content_timeout).until(
+        EC.presence_of_element_located(("css selector", content_sel))
+    )
+
+
+# ── Selenium Scraper ───────────────────────────────────────────────────────────
+
+def scrape_with_selenium(
+    base_url: str, start: int, end: int, config: dict, progress_cb=None
+):
+    """Used when config['needs_js'] is True."""
+    driver = make_selenium_driver()
     chapters, failed = {}, []
     total = end - start + 1
     url_pattern = config["url_pattern"]
@@ -544,21 +544,10 @@ def scrape_with_selenium(
     try:
         for i, ch_num in enumerate(range(start, end + 1), 1):
             chapter_url = url_pattern.format(base=base_url, num=ch_num)
+            print(f"Selenium fetching CH{ch_num}: {chapter_url}")
             try:
                 driver.get(chapter_url)
-                import time as _time
-                deadline = _time.time() + 20
-                while _time.time() < deadline:
-                    title = driver.title
-                    if "Just a moment" not in title and "Attention Required" not in title:
-                        break
-                    _time.sleep(1)
-                
-                WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located(
-                        ("css selector", config["content_sel"])
-                    )
-                )
+                wait_for_cf_and_content(driver, config["content_sel"])
                 text = extract_chapter_text(driver.page_source, config, ch_num)
                 chapters[ch_num] = text
                 ok = True
@@ -575,14 +564,11 @@ def scrape_with_selenium(
 
             if progress_cb:
                 progress_cb(i, total, ch_num, ok)
-            time.sleep(random.uniform(0.4, 0.9))
+            time.sleep(random.uniform(0.8, 1.8))
     finally:
         driver.quit()
 
     return chapters, failed
-
-
-# ── Output Builders ────────────────────────────────────────────────────────────
 
 def build_epub(
     chapters_dict: dict,
@@ -601,8 +587,6 @@ def build_epub(
 
     if cover_image:
         ext = cover_media_type.split("/")[-1].replace("jpeg", "jpg")
-        # set_cover() internally adds the image item — don't call add_item()
-        # separately or the zip will contain a duplicate entry and warn/corrupt.
         book.set_cover(f"images/cover.{ext}", cover_image)
 
     epub_chapters = []
@@ -650,14 +634,9 @@ def build_zip(chapters_dict: dict) -> bytes:
     buf.seek(0)
     return buf.read()
 
-
-# ── SSE Helper ─────────────────────────────────────────────────────────────────
-
 def sse(data: dict) -> str:
     return f"data: {json.dumps(data)}\n\n"
 
-
-# ── Routes ─────────────────────────────────────────────────────────────────────
 
 @app.route("/", methods=["GET"])
 def root():
@@ -675,7 +654,6 @@ def health():
 
 
 def _validate(data):
-    """Shared validation. Returns (url, fmt, start, end, error_response)."""
     url = str(data.get("url", "")).strip()
     fmt = str(data.get("format", "txt")).strip().lower()
     try:
@@ -699,12 +677,6 @@ def _validate(data):
 
 @app.route("/scrape-stream", methods=["POST"])
 def scrape_stream():
-    """
-    SSE streaming endpoint.
-    Sends per-chapter progress events, then on completion delivers
-    the file base64-encoded in the final 'done' event so the browser
-    can trigger a download without a second request.
-    """
     data = request.get_json(silent=True) or {}
     url, fmt, start, end, err = _validate(data)
     if err:
@@ -755,10 +727,8 @@ def scrape_stream():
         thread = threading.Thread(target=run_scrape, daemon=True)
         thread.start()
 
-        # Emit start event so the frontend can display the novel title
         yield sse({"type": "start", "title": novel_title})
 
-        # Forward events to client as they arrive
         last_sent = 0
         while thread.is_alive() or last_sent < len(events):
             while last_sent < len(events):
@@ -766,7 +736,6 @@ def scrape_stream():
                 last_sent += 1
             time.sleep(0.1)
 
-        # Drain any final events
         while last_sent < len(events):
             yield sse(events[last_sent])
             last_sent += 1
@@ -828,14 +797,9 @@ def scrape_stream():
 
 @app.route("/parse", methods=["POST"])
 def parse():
-    """
-    Accepts raw HTML + site domain + chapter number from the browser.
-    Used by client_fetch sites where Railway cannot reach the target host.
-    Returns {"text": "...", "ok": true} or {"error": "...", "ok": false}.
-    """
-    data   = request.get_json(silent=True) or {}
-    domain = str(data.get("domain", "")).strip()
-    ch_num = int(data.get("ch", 0))
+    data      = request.get_json(silent=True) or {}
+    domain    = str(data.get("domain", "")).strip()
+    ch_num    = int(data.get("ch", 0))
     html_text = str(data.get("html", ""))
 
     config = SITE_CONFIG.get(domain)
@@ -855,12 +819,6 @@ def parse():
 
 @app.route("/scrape-client-stream", methods=["POST"])
 def scrape_client_stream():
-    """
-    SSE endpoint for client_fetch sites.
-    The browser fetches each chapter itself and POSTs batches of
-    {ch, html} objects here. We parse and stream progress back.
-    Body: {url, format, start, end, chapters: [{ch, html}, ...]}
-    """
     data = request.get_json(silent=True) or {}
     url, fmt, start, end, err = _validate(data)
     if err:
@@ -871,9 +829,9 @@ def scrape_client_stream():
     if not config:
         return jsonify({"error": f"Unsupported site: {domain}"}), 400
 
-    base_url    = get_base_url(url)
-    novel_title = get_novel_title_from_url(url)
-    raw_chapters = data.get("chapters", [])  # [{ch: N, html: "..."}]
+    base_url     = get_base_url(url)
+    novel_title  = get_novel_title_from_url(url)
+    raw_chapters = data.get("chapters", [])
 
     def generate():
         import base64
@@ -884,19 +842,18 @@ def scrape_client_stream():
         yield sse({"type": "start", "title": novel_title})
 
         for i, item in enumerate(raw_chapters, 1):
-            ch_num   = int(item.get("ch", 0))
+            ch_num    = int(item.get("ch", 0))
             html_text = item.get("html", "")
             try:
                 text = extract_chapter_text(html_text, config, ch_num)
                 chapters[ch_num] = text
                 ok = True
-            except ChapterNotFound as e:
-                ok = False
+            except ChapterNotFound:
                 yield sse({"type": "progress", "done": i, "total": total,
                            "ch": ch_num, "ok": False, "pct": int((i/total)*90),
                            "end_of_novel": ch_num})
                 break
-            except Exception as e:
+            except Exception:
                 failed.append(ch_num)
                 ok = False
 
@@ -944,7 +901,6 @@ def scrape_client_stream():
 
 @app.route("/scrape", methods=["POST"])
 def scrape():
-    """Legacy non-streaming endpoint. Kept for backwards compatibility."""
     data = request.get_json(silent=True) or {}
     url, fmt, start, end, err = _validate(data)
     if err:
@@ -988,27 +944,11 @@ def scrape():
     return send_file(buf, mimetype="application/zip",
                      as_attachment=True, download_name=f"{safe_title}.zip")
 
-
-# Run smoke test on import (catches gunicorn worker startup failures early)
 import threading as _st
 
-
 def selenium_smoke_test():
-    """Run once at startup to verify Chromium/ChromeDriver are working."""
     try:
-        from selenium import webdriver
-        from selenium.webdriver.chrome.service import Service
-        from selenium.webdriver.chrome.options import Options
-        opts = Options()
-        for arg in ["--headless=new", "--no-sandbox", "--disable-dev-shm-usage",
-                    "--disable-gpu", "--disable-extensions", "--log-level=3"]:
-            opts.add_argument(arg)
-        opts.binary_location = os.environ.get("CHROME_BIN", "/usr/bin/chromium")
-        svc = Service(
-            executable_path=os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver"),
-            log_path=os.devnull,
-        )
-        driver = webdriver.Chrome(service=svc, options=opts)
+        driver = make_selenium_driver()
         driver.get("about:blank")
         driver.quit()
         print("Selenium smoke test PASSED")
@@ -1016,7 +956,6 @@ def selenium_smoke_test():
         import traceback
         print(f"Selenium smoke test FAILED: {e}")
         traceback.print_exc()
-
 
 _st.Thread(target=selenium_smoke_test, daemon=True).start()
 
