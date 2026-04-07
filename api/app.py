@@ -41,12 +41,8 @@ SITE_CONFIG = {
         ],
         "sentinel":     "Some novel pages moved for better user experience",
         "needs_js":     False,
-        "client_fetch": True,   # Railway datacenter IP blocked by Cloudflare (403)
-                                # — browser fetches pages, server only parses HTML
-        "impersonate":  "chrome131",
-        "max_concurrent": 1,    # sequential — novelfire 429s under concurrent load
-        "request_delay":  1.5,  # 1.5s between requests to stay under rate limit
-        "extra_headers": {
+        "impersonate":  "chrome131",   # chrome124 now 403s; try latest fingerprint
+        "extra_headers": {            # extra headers help pass CF bot checks
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.9",
             "Accept-Encoding": "gzip, deflate, br",
@@ -376,13 +372,12 @@ def fetch_chapter_sync(chapter_url: str, config: dict, ch_num: int) -> str:
     Sync fetch using curl_cffi to impersonate a real Chrome TLS fingerprint,
     bypassing Cloudflare Turnstile / Bot Management.
     """
-    impersonate   = config.get("impersonate", DEFAULT_IMPERSONATE)
+    impersonate  = config.get("impersonate", DEFAULT_IMPERSONATE)
     extra_headers = config.get("extra_headers", {})
-    req_delay     = config.get("request_delay", REQUEST_DELAY)
     last_exc = None
     for attempt in range(RETRY_ATTEMPTS):
         try:
-            time.sleep(req_delay)
+            time.sleep(REQUEST_DELAY)
             r = cffi_requests.get(
                 chapter_url,
                 impersonate=impersonate,
@@ -394,12 +389,6 @@ def fetch_chapter_sync(chapter_url: str, config: dict, ch_num: int) -> str:
 
             if r.status_code == 404:
                 raise ChapterNotFound(f"Chapter {ch_num} returned 404")
-            if r.status_code == 429:
-                wait = 10 * (attempt + 1)
-                print(f"CH{ch_num} rate limited (429), backing off {wait}s")
-                time.sleep(wait)
-                last_exc = Exception(f"HTTP Error 429 (rate limited) for chapter {ch_num}")
-                continue
             r.raise_for_status()
             return extract_chapter_text(r.text, config, ch_num)
 
@@ -440,7 +429,7 @@ async def scrape_all_chapters(
     progress_cb(done, total, ch_num, ok, end_of_novel=None) called per chapter.
     Returns (chapters_dict, failed_list).
     """
-    sem = asyncio.Semaphore(config.get("max_concurrent", MAX_CONCURRENT))
+    sem = asyncio.Semaphore(MAX_CONCURRENT)
     chapters = {}
     failed = []
     total = end - start + 1
@@ -717,12 +706,6 @@ def scrape_stream():
     config = SITE_CONFIG.get(domain)
     if not config:
         return jsonify({"error": f"Unsupported site: {domain}"}), 400
-
-    if config.get("client_fetch"):
-        return jsonify({"error": (
-            f"{domain} blocks server-side requests (Cloudflare 403). "
-            "Use the /scrape-client-stream endpoint — the browser must fetch pages for this site."
-        )}), 400
 
     base_url    = get_base_url(url)
     novel_title = get_novel_title_from_url(url)

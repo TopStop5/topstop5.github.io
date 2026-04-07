@@ -320,14 +320,6 @@
     addLog(`// Format:   ${selectedFormat.toUpperCase()}`,     'info');
     addLog('');
 
-    // novelfire.net blocks datacenter IPs (Cloudflare 403) — browser must fetch
-    const CLIENT_FETCH_SITES = ['novelfire', 'wetriedtls'];
-    if (CLIENT_FETCH_SITES.includes(site)) {
-      await scrapeClientFetch(payload, total);
-      document.getElementById('scrape-btn').disabled = false;
-      return;
-    }
-
     // Try SSE stream; fall back to classic single-response on failure
     let ok = false;
     try {
